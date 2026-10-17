@@ -113,38 +113,52 @@ export async function initDatabase(): Promise<{ isFirstRun: boolean }> {
     }
   }
 
-  // 1. Load SQL.js WASM: prefer bundled inline wasm so it loads without ANY network issue or fetch interceptor conflict
+  // 1. Load SQL.js WASM or Asm engine
+  // Priority A: Local /sql-wasm.wasm
   try {
-    if (typeof initSqlJsInline === 'function') {
-      SQL = await initSqlJsInline();
-    }
-  } catch (inlineErr) {
-    console.warn('Bundled inline wasm initialization failed, trying static /sql-wasm.wasm:', inlineErr);
+    SQL = await initSqlJsStandard({
+      locateFile: (file: string) => `/sql-wasm.wasm`,
+    });
+  } catch (localErr) {
+    console.warn('Local /sql-wasm.wasm failed, trying cdnjs 1.10.3:', localErr);
   }
 
-  // Fallback to local static or CDN if inline did not succeed
+  // Priority B: CDN as explicitly requested
   if (!SQL) {
     try {
       SQL = await initSqlJsStandard({
-        locateFile: (file: string) => `/sql-wasm.wasm`,
+        locateFile: (file: string) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`,
       });
-    } catch (localErr) {
-      console.warn('Local /sql-wasm.wasm failed, trying cdnjs 1.10.3 as requested:', localErr);
-      try {
-        SQL = await initSqlJsStandard({
-          locateFile: (file: string) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`,
-        });
-      } catch (cdnErr) {
-        console.warn('CDN 1.10.3 failed, trying unpkg:', cdnErr);
-        SQL = await initSqlJsStandard({
-          locateFile: (file: string) => `https://unpkg.com/sql.js@1.10.3/dist/${file}`,
-        });
+    } catch (cdnErr) {
+      console.warn('CDN 1.10.3 failed, trying inline WASM:', cdnErr);
+    }
+  }
+
+  // Priority C: Bundled inline WASM (zero network fetch)
+  if (!SQL) {
+    try {
+      const inlineFn = typeof initSqlJsInline === 'function' ? initSqlJsInline : (initSqlJsInline as any)?.default;
+      if (typeof inlineFn === 'function') {
+        SQL = await inlineFn();
       }
+    } catch (inlineErr) {
+      console.warn('Inline wasm failed, trying unpkg CDN:', inlineErr);
+    }
+  }
+
+  // Priority D: unpkg CDN
+  if (!SQL) {
+    try {
+      SQL = await initSqlJsStandard({
+        locateFile: (file: string) => `https://unpkg.com/sql.js@1.10.3/dist/${file}`,
+      });
+    } catch (unpkgErr) {
+      console.warn('Unpkg CDN failed:', unpkgErr);
     }
   }
 
   if (!SQL) {
-    throw new Error('Failed to load sql.js WebAssembly engine');
+    throw new Error('Failed to load sql.js WebAssembly engine from local, CDN, and inline sources.');
   }
 
   // 2. Load from IndexedDB with corrupt-snapshot fallback
@@ -255,6 +269,7 @@ function createSchema(db: Database) {
       status TEXT NOT NULL DEFAULT 'New',
       action_taken TEXT NOT NULL DEFAULT 'Warned',
       policy_version INTEGER NOT NULL DEFAULT 1,
+      false_positive_note TEXT DEFAULT '',
       FOREIGN KEY (scan_id) REFERENCES scan_sessions(scan_id) ON DELETE CASCADE
     );
 

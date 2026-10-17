@@ -14,6 +14,7 @@ export type PlaceholderKind =
   | 'password'
   | 'card'
   | 'confidential'
+  | 'possible_secret'
   | 'custom';
 
 export interface ScanMatchOffset {
@@ -38,26 +39,98 @@ export interface ScanResult {
   ruleMatches: Record<string, number>;
   durationMs: number;
   disclaimer: string;
+  failedRuleIds?: string[];
+  failureMessage?: string;
 }
 
-const PASSWORD_PLACEHOLDERS = new Set([
+export const KNOWN_PLACEHOLDERS = [
   'changeme',
+  'your_api_key',
   'your_password',
   'your_secret',
+  'your_token',
   'xxxx',
   'xxxxxx',
-  'password',
-  'placeholder',
   'example',
-  'test',
-  '123456',
+  'test123',
+  '<api_key>',
+  '<apikey>',
+  '{api_key}',
   '<password>',
   '{password}',
+  'placeholder',
   'null',
   'undefined',
   'true',
   'false',
-]);
+];
+
+/**
+ * Checks if a candidate secret is an obvious placeholder or dummy value
+ */
+export function isPlaceholder(val: string): boolean {
+  if (!val) return true;
+  const lower = val.toLowerCase().trim();
+  if (lower.length === 0) return true;
+  for (const ph of KNOWN_PLACEHOLDERS) {
+    if (lower === ph || lower.includes(ph)) {
+      return true;
+    }
+  }
+  // All x's, asterisks, or dashes
+  if (/^x+$/i.test(lower) || /^\*+$/.test(lower) || /^-+$/.test(lower)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Calculates Shannon entropy for a given string
+ */
+export function calculateShannonEntropy(str: string): number {
+  if (!str || str.length === 0) return 0;
+  const frequencies: Record<string, number> = {};
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    frequencies[char] = (frequencies[char] || 0) + 1;
+  }
+  let entropy = 0;
+  const len = str.length;
+  for (const char in frequencies) {
+    const p = frequencies[char] / len;
+    entropy -= p * Math.log2(p);
+  }
+  return entropy;
+}
+
+/**
+ * Returns regex flags guaranteed to include 'g'
+ */
+export function getRuleFlags(rule: ScannerRuleConfig): string {
+  const raw = (rule.flags || 'g').trim();
+  const set = new Set(raw.split(''));
+  set.add('g'); // always include 'g'
+  return Array.from(set).join('');
+}
+
+/**
+ * Compiles a safe RegExp using rule.flags, sanitizing any legacy inline (?i) or (?m)
+ */
+export function compileRuleRegex(rule: ScannerRuleConfig): RegExp {
+  let pattern = rule.regex;
+  let flags = getRuleFlags(rule);
+
+  if (pattern.includes('(?i)')) {
+    pattern = pattern.replace(/\(\?i\)/g, '');
+    if (!flags.includes('i')) flags += 'i';
+  }
+  if (pattern.includes('(?m)')) {
+    pattern = pattern.replace(/\(\?m\)/g, '');
+    if (!flags.includes('m')) flags += 'm';
+  }
+
+  return new RegExp(pattern, flags);
+}
 
 const SEVERITY_WEIGHTS: Record<SeverityLevel, number> = {
   Low: 1,
@@ -77,7 +150,7 @@ export async function scanTextAsync(
 ): Promise<ScanResult> {
   const startTime = performance.now();
   const disclaimer =
-    'Pattern detection is not a complete DLP solution. No matches does not mean the text is safe.';
+    'No configured patterns matched. This does not mean the text is safe.';
 
   if (!text || text.trim().length === 0) {
     return {
@@ -96,6 +169,7 @@ export async function scanTextAsync(
   const matches: ScanMatchOffset[] = [];
   const categoryCounts: Record<string, number> = {};
   const ruleMatches: Record<string, number> = {};
+  const failedRuleIds: string[] = [];
 
   try {
     // Process text in chunks or allow micro-task yielding for very long text
@@ -135,7 +209,7 @@ export async function scanTextAsync(
       try {
         if (rule.rule_id === 'rule_payment_card') {
           // Card regex candidate detection + Luhn filter
-          const cardRe = new RegExp(rule.regex, 'g');
+          const cardRe = compileRuleRegex(rule);
           let m: RegExpExecArray | null;
           while ((m = cardRe.exec(text)) !== null) {
             const candidate = m[0];
@@ -156,14 +230,14 @@ export async function scanTextAsync(
           }
         } else if (rule.rule_id === 'rule_password_assignments') {
           // Password assignments with placeholder filtering
-          const pwdRe = new RegExp(rule.regex, 'gi');
+          const pwdRe = compileRuleRegex(rule);
           let m: RegExpExecArray | null;
           while ((m = pwdRe.exec(text)) !== null) {
             const rawMatch = m[0];
             const capturedValue = m[1] || '';
             const normalized = capturedValue.toLowerCase().trim();
 
-            if (normalized.length >= 4 && !PASSWORD_PLACEHOLDERS.has(normalized)) {
+            if (normalized.length >= 4 && !isPlaceholder(capturedValue)) {
               // Find the prefix (e.g. "password=" or "secret: ")
               const splitIdx = rawMatch.indexOf(capturedValue);
               const prefix = splitIdx > 0 ? rawMatch.slice(0, splitIdx) : 'password=';
@@ -183,8 +257,96 @@ export async function scanTextAsync(
               ruleMatches[rule.rule_id] = (ruleMatches[rule.rule_id] || 0) + 1;
             }
           }
+        } else if (rule.rule_id === 'rule_natural_language_credentials') {
+          // Conversational credentials detection: e.g. "my api key is X", "the password is X"
+          // Redacts ONLY the value, keeping the phrase prefix intact
+          const nlRe = compileRuleRegex(rule);
+          let m: RegExpExecArray | null;
+          while ((m = nlRe.exec(text)) !== null) {
+            const fullMatch = m[0];
+            const capturedVal = (m[1] || '').trim();
+            if (!capturedVal) continue;
+
+            const cleanedVal = capturedVal.replace(/[.,;!?]+$/, '').trim();
+            if (cleanedVal.length < 6) continue;
+            if (isPlaceholder(cleanedVal)) continue;
+
+            // At least one digit or mixed case
+            const hasDigit = /\d/.test(cleanedVal);
+            const hasMixedCase = /[a-z]/.test(cleanedVal) && /[A-Z]/.test(cleanedVal);
+            if (!hasDigit && !hasMixedCase) continue;
+
+            const valIdx = fullMatch.indexOf(capturedVal);
+            if (valIdx === -1) continue;
+
+            let start = m.index + valIdx;
+            let end = start + cleanedVal.length;
+
+            // If quotes surrounded the value in the match, redact including the quotes
+            if (valIdx > 0 && (fullMatch[valIdx - 1] === '"' || fullMatch[valIdx - 1] === "'")) {
+              start = m.index + valIdx - 1;
+              const endCharIdx = valIdx + capturedVal.length;
+              if (endCharIdx < fullMatch.length && (fullMatch[endCharIdx] === '"' || fullMatch[endCharIdx] === "'")) {
+                end = m.index + endCharIdx + 1;
+              }
+            }
+
+            matches.push({
+              rule_id: rule.rule_id,
+              category: rule.category,
+              severity: rule.severity,
+              start,
+              end,
+              explanation: rule.explanation,
+              falsePositiveNote: rule.falsePositiveNote,
+              placeholderType: 'api_key',
+            });
+            categoryCounts[rule.category] = (categoryCounts[rule.category] || 0) + 1;
+            ruleMatches[rule.rule_id] = (ruleMatches[rule.rule_id] || 0) + 1;
+          }
+        } else if (rule.rule_id === 'rule_high_entropy_secret') {
+          // Standalone string of 16+ chars with mixed letters and digits and Shannon entropy > 3.5
+          // only when a credential word (key, token, secret, password, auth) appears within 40 characters
+          const entropyRe = compileRuleRegex(rule);
+          let m: RegExpExecArray | null;
+          while ((m = entropyRe.exec(text)) !== null) {
+            const candidate = m[0];
+            if (candidate.length < 16) continue;
+
+            const hasLetters = /[a-zA-Z]/.test(candidate);
+            const hasDigits = /\d/.test(candidate);
+            if (!hasLetters || !hasDigits) continue;
+
+            if (isPlaceholder(candidate)) continue;
+
+            const entropy = calculateShannonEntropy(candidate);
+            if (entropy <= 3.5) continue;
+
+            const tokenStart = m.index;
+            const tokenEnd = m.index + candidate.length;
+            const before = text.slice(Math.max(0, tokenStart - 40), tokenStart);
+            const after = text.slice(tokenEnd, Math.min(text.length, tokenEnd + 40));
+
+            const credWordRe = /(?:key|token|secret|password|auth)/i;
+            if (!credWordRe.test(before) && !credWordRe.test(after)) {
+              continue;
+            }
+
+            matches.push({
+              rule_id: rule.rule_id,
+              category: rule.category,
+              severity: rule.severity,
+              start: tokenStart,
+              end: tokenEnd,
+              explanation: `${rule.explanation} (Shannon entropy: ${entropy.toFixed(2)})`,
+              falsePositiveNote: rule.falsePositiveNote,
+              placeholderType: 'possible_secret',
+            });
+            categoryCounts[rule.category] = (categoryCounts[rule.category] || 0) + 1;
+            ruleMatches[rule.rule_id] = (ruleMatches[rule.rule_id] || 0) + 1;
+          }
         } else if (rule.rule_id === 'rule_national_id_cnic') {
-          const cnicRe = new RegExp(rule.regex, 'g');
+          const cnicRe = compileRuleRegex(rule);
           let m: RegExpExecArray | null;
           while ((m = cnicRe.exec(text)) !== null) {
             matches.push({
@@ -201,7 +363,7 @@ export async function scanTextAsync(
             ruleMatches[rule.rule_id] = (ruleMatches[rule.rule_id] || 0) + 1;
           }
         } else if (rule.rule_id === 'rule_email_list') {
-          const emailRe = new RegExp(rule.regex, 'gi');
+          const emailRe = compileRuleRegex(rule);
           let m: RegExpExecArray | null;
           const emailOffsets: { start: number; end: number }[] = [];
           while ((m = emailRe.exec(text)) !== null) {
@@ -228,7 +390,7 @@ export async function scanTextAsync(
             ruleMatches[rule.rule_id] = (ruleMatches[rule.rule_id] || 0) + 1;
           }
         } else if (rule.rule_id === 'rule_confidentiality_labels') {
-          const confRe = new RegExp(rule.regex, 'gi');
+          const confRe = compileRuleRegex(rule);
           let m: RegExpExecArray | null;
           while ((m = confRe.exec(text)) !== null) {
             matches.push({
@@ -246,7 +408,7 @@ export async function scanTextAsync(
           }
         } else {
           // Standard custom or known pattern regex
-          const genericRe = new RegExp(rule.regex, 'g');
+          const genericRe = compileRuleRegex(rule);
           let m: RegExpExecArray | null;
           let placeholderType: PlaceholderKind = 'custom';
           if (rule.category.includes('API') || rule.category.includes('Secret')) {
@@ -273,6 +435,7 @@ export async function scanTextAsync(
         }
       } catch (ruleErr) {
         console.warn(`Error running rule ${rule.rule_id}:`, ruleErr);
+        failedRuleIds.push(rule.rule_id);
       }
     }
 
@@ -288,9 +451,16 @@ export async function scanTextAsync(
     }
 
     const durationMs = Math.round(performance.now() - startTime);
+    const scan_status = failedRuleIds.length > 0 ? 'Partial' : 'Completed';
+    const failureMessage =
+      failedRuleIds.length === 1
+        ? `Partial scan: rule ${failedRuleIds[0]} failed`
+        : failedRuleIds.length > 1
+        ? `Partial scan: rules ${failedRuleIds.join(', ')} failed`
+        : undefined;
 
     return {
-      scan_status: 'Completed',
+      scan_status,
       totalMatches: matches.length,
       categories: Object.keys(categoryCounts),
       categoryCounts,
@@ -299,6 +469,8 @@ export async function scanTextAsync(
       ruleMatches,
       durationMs,
       disclaimer,
+      failedRuleIds: failedRuleIds.length > 0 ? failedRuleIds : undefined,
+      failureMessage,
     };
   } catch (err) {
     console.error('Scan failed:', err);

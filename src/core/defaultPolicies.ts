@@ -7,6 +7,7 @@ export interface ScannerRuleConfig {
   rule_id: string;
   category: string;
   regex: string;
+  flags?: string; // Regex flags e.g. "g", "gi", "gim"
   severity: 'Low' | 'Medium' | 'High' | 'Critical';
   enabled: boolean;
   explanation: string;
@@ -41,6 +42,7 @@ export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
     category: 'National ID',
     // Matches Pakistani CNIC standard format 12345-1234567-1 or 13 consecutive digits
     regex: '\\b\\d{5}-\\d{7}-\\d\\b|\\b\\d{13}\\b',
+    flags: 'g',
     severity: 'High',
     enabled: true,
     explanation: 'Detected Pakistani National Identity Card (CNIC) number format.',
@@ -51,6 +53,7 @@ export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
     category: 'Payment Cards',
     // 13 to 19 digits with optional spaces or hyphens; must pass Luhn check
     regex: '\\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|6(?:011|5[0-9]{2})[0-9]{12}|(?:2131|1800|35\\d{3})\\d{11}|(?:[0-9]{4}[-\\s]?){3,4}[0-9]{1,4})\\b',
+    flags: 'g',
     severity: 'Critical',
     enabled: true,
     explanation: 'Detected payment card primary account number (PAN) passing Luhn checksum.',
@@ -61,6 +64,7 @@ export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
     category: 'Email Lists',
     // Email regex
     regex: '\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b',
+    flags: 'gi',
     severity: 'Medium', // Escalates to High if 3+ emails found in scan
     enabled: true,
     explanation: 'Detected corporate or personal email addresses in prompt payload.',
@@ -71,6 +75,7 @@ export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
     category: 'API Keys & Secrets',
     // Known key patterns: OpenAI sk-, Stripe sk_live_/pk_live_, AWS AKIA, Google AIza, GitHub ghp/gho/github_pat, Slack xox, JWT, Bearer tokens, PEM headers
     regex: '\\b(?:sk-[a-zA-Z0-9]{20,}|sk_live_[a-zA-Z0-9]{24,}|pk_live_[a-zA-Z0-9]{24,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|(?:ghp|gho|github_pat)_[a-zA-Z0-9_]{36,}|xox[baprs]-[0-9a-zA-Z-]+|eyJ[a-zA-Z0-9_-]{10,}\\.eyJ[a-zA-Z0-9_-]{10,}\\.[a-zA-Z0-9_-]{10,}|Bearer\\s+[a-zA-Z0-9_\\-\\.]{20,})\\b|-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----',
+    flags: 'g',
     severity: 'Critical',
     enabled: true,
     explanation: 'Detected production API key, cloud access token, JWT, or private cryptographic key.',
@@ -81,6 +86,7 @@ export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
     category: 'Password Assignments',
     // password = value, passwd = value, secret = value
     regex: '(?:password|passwd|pwd|secret|api_key|apikey)\\s*[:=]\\s*["\']?([^"\'\\s\\r\\n]{4,})["\']?',
+    flags: 'gi',
     severity: 'High',
     enabled: true,
     explanation: 'Detected explicit password or authentication secret key-value assignment.',
@@ -89,8 +95,9 @@ export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
   {
     rule_id: 'rule_credential_labels',
     category: 'Credential Labels',
-    // username: with password: nearby or "login credentials"
-    regex: '(?i)(?:login\\s+credentials|username\\s*:[^\\n]+\\s*password\\s*:|auth\\s+credentials)',
+    // username: with password: nearby or "login credentials" - removed inline (?i)
+    regex: '(?:login\\s+credentials|username\\s*:[^\\n]+\\s*password\\s*:|auth\\s+credentials)',
+    flags: 'gi',
     severity: 'High',
     enabled: true,
     explanation: 'Detected bundled credential pair or authentication prompt phrasing.',
@@ -99,8 +106,9 @@ export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
   {
     rule_id: 'rule_source_config_markers',
     category: 'Source Code & Config Markers',
-    // Database connection strings, .env assignments, private config blocks
-    regex: '(?:mongodb(?:\\+srv)?|postgres(?:ql)?|mysql|redis):\\/\\/[^\\s"\'`]+|(?m)^[A-Z0-9_]{3,}\\s*=\\s*["\']?[^\\s"\']{8,}["\']?',
+    // Database connection strings, .env assignments, private config blocks - removed inline (?m)
+    regex: '(?:mongodb(?:\\+srv)?|postgres(?:ql)?|mysql|redis):\\/\\/[^\\s"\'`]+|^[A-Z0-9_]{3,}\\s*=\\s*["\']?[^\\s"\']{8,}["\']?',
+    flags: 'gim',
     severity: 'High',
     enabled: true,
     explanation: 'Detected database connection URI with embedded credentials or environment configuration variable.',
@@ -109,12 +117,35 @@ export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
   {
     rule_id: 'rule_confidentiality_labels',
     category: 'Confidentiality Labels',
-    // Explicit classification headers
-    regex: '(?i)\\b(?:CONFIDENTIAL|STRICTLY CONFIDENTIAL|INTERNAL ONLY|INTERNAL USE ONLY|PROPRIETARY & CONFIDENTIAL|RESTRICTED DISCLOSURE)\\b',
+    // Explicit classification headers - removed inline (?i)
+    regex: '\\b(?:CONFIDENTIAL|STRICTLY CONFIDENTIAL|INTERNAL ONLY|INTERNAL USE ONLY|PROPRIETARY & CONFIDENTIAL|RESTRICTED DISCLOSURE)\\b',
+    flags: 'gi',
     severity: 'High',
     enabled: true,
     explanation: 'Detected explicit institutional confidentiality or internal-use restriction marking.',
     falsePositiveNote: 'Standard non-disclosure boilerplate in open-source license files.',
+  },
+  {
+    rule_id: 'rule_natural_language_credentials',
+    category: 'Password/API Key',
+    // Detects conversational credentials: "my api key is X", "api key: X", "the password is X", "my token is X", "secret key is X", "pass is X", "pwd is X"
+    regex: '\\b(?:my\\s+api\\s+key\\s+is|api\\s+key\\s*[:=]|api\\s+key\\s+is|the\\s+password\\s+is|my\\s+token\\s+is|secret\\s+key\\s+is|pass\\s+is|pwd\\s+is)\\s*["\']?([^"\'\\s\\r\\n]{6,})["\']?',
+    flags: 'gi',
+    severity: 'High',
+    enabled: true,
+    explanation: 'Detected natural-language credential disclosure phrase with key or password value.',
+    falsePositiveNote: 'Placeholder values like "changeme", "your_api_key", or documentation examples.',
+  },
+  {
+    rule_id: 'rule_high_entropy_secret',
+    category: 'possible secret',
+    // Standalone string of 16+ chars evaluated with Shannon entropy filter near credential keywords
+    regex: '\\b[a-zA-Z0-9_-]{16,}\\b',
+    flags: 'g',
+    severity: 'Medium',
+    enabled: true,
+    explanation: 'Standalone high-entropy string detected within 40 characters of credential keywords (Shannon entropy > 3.5).',
+    falsePositiveNote: 'High-entropy strings may be non-sensitive hashes, UUIDs, or random identifiers.',
   },
 ];
 

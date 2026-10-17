@@ -44,6 +44,8 @@ function getPlaceholder(kind: PlaceholderKind, keyPrefix?: string): string {
       return '[CARD NUMBER REDACTED]';
     case 'confidential':
       return '[CONFIDENTIAL CONTENT REMOVED]';
+    case 'possible_secret':
+      return '[POSSIBLE SECRET REDACTED]';
     case 'custom':
     default:
       return '[SENSITIVE DATA REDACTED]';

@@ -12,18 +12,47 @@ export const WarningPanel: React.FC<{
   onProceedToRedact: () => void;
   onClear: () => void;
 }> = ({ scanResult, onProceedToRedact, onClear }) => {
+  const isPartial = scanResult.scan_status === 'Partial' || (scanResult.failedRuleIds && scanResult.failedRuleIds.length > 0);
+  const failureText =
+    scanResult.failureMessage ||
+    (scanResult.failedRuleIds && scanResult.failedRuleIds.length > 0
+      ? `Partial scan: rule ${scanResult.failedRuleIds.join(', ')} failed`
+      : 'Partial scan');
+
   if (scanResult.totalMatches === 0) {
+    if (isPartial) {
+      return (
+        <div className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 rounded-xl p-5 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center text-amber-700 dark:text-amber-300 shrink-0">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-950 dark:text-amber-200">
+                {failureText}
+              </h4>
+              <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                {scanResult.disclaimer}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-5 mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+          <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
-              Completed – no patterns matched
+              No configured patterns matched. This does not mean the text is safe.
             </h4>
             <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
               {scanResult.disclaimer}
@@ -49,6 +78,11 @@ export const WarningPanel: React.FC<{
                 Sensitive Data Patterns Detected ({scanResult.totalMatches})
               </h3>
               <RiskBadge level={scanResult.highestSeverity} size="sm" />
+              {isPartial && (
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  {failureText}
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Evaluated {scanResult.matches.length} detection zones in {scanResult.durationMs}ms.
@@ -75,6 +109,15 @@ export const WarningPanel: React.FC<{
         </div>
       </div>
 
+      {isPartial && (
+        <div className="mt-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex items-center gap-2">
+          <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>{failureText} &mdash; some rules could not complete execution.</span>
+        </div>
+      )}
+
       {/* Findings Summary Table - NEVER prints secret contents! */}
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-left text-xs">
@@ -84,7 +127,7 @@ export const WarningPanel: React.FC<{
               <th className="pb-2">Severity</th>
               <th className="pb-2">Rule ID</th>
               <th className="pb-2">Offset Location</th>
-              <th className="pb-2">Contextual Explanation</th>
+              <th className="pb-2">Contextual Explanation & False-Positive Note</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
@@ -92,13 +135,13 @@ export const WarningPanel: React.FC<{
               <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
                 <td className="py-2.5 font-semibold text-slate-900 dark:text-white">{m.category}</td>
                 <td className="py-2.5"><RiskBadge level={m.severity} /></td>
-                <td className="py-2.5 font-mono text-[11px] text-slate-500">{m.rule_id}</td>
+                <td className="py-2.5 font-mono text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">{m.rule_id}</td>
                 <td className="py-2.5 font-mono text-[11px] text-slate-500">chars {m.start}–{m.end}</td>
                 <td className="py-2.5">
-                  <div>{m.explanation}</div>
+                  <div className="font-medium text-slate-800 dark:text-slate-200">{m.explanation}</div>
                   {m.falsePositiveNote && (
-                    <div className="text-[11px] text-slate-400 mt-0.5 italic">
-                      Note: {m.falsePositiveNote}
+                    <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
+                      <span className="font-semibold">False-positive note:</span> {m.falsePositiveNote}
                     </div>
                   )}
                 </td>

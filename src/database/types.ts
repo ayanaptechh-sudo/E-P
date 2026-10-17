@@ -83,6 +83,7 @@ export interface Finding {
   rule_id: string;
   severity: SeverityLevel;
   explanation: string;
+  false_positive_note?: string;
   created_at: string;
   status: FindingStatus;
   action_taken: FindingActionTaken;

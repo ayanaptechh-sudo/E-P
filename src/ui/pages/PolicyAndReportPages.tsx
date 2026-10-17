@@ -57,6 +57,7 @@ export const PolicyPage: React.FC = () => {
   const [ruleId, setRuleId] = useState('');
   const [ruleCategory, setRuleCategory] = useState('');
   const [ruleRegex, setRuleRegex] = useState('');
+  const [ruleFlags, setRuleFlags] = useState('g');
   const [ruleSeverity, setRuleSeverity] = useState<SeverityLevel>('High');
   const [ruleExplanation, setRuleExplanation] = useState('');
   const [ruleFalsePositiveNote, setRuleFalsePositiveNote] = useState('');
@@ -182,6 +183,7 @@ export const PolicyPage: React.FC = () => {
     setRuleId(`rule_custom_${Date.now()}`);
     setRuleCategory('Custom Organization Data');
     setRuleRegex('');
+    setRuleFlags('g');
     setRuleSeverity('High');
     setRuleExplanation('Organization custom proprietary identifier pattern.');
     setRuleFalsePositiveNote('Internal serial or reference codes.');
@@ -194,6 +196,7 @@ export const PolicyPage: React.FC = () => {
     setRuleId(rule.rule_id);
     setRuleCategory(rule.category);
     setRuleRegex(rule.regex);
+    setRuleFlags(rule.flags || 'g');
     setRuleSeverity(rule.severity);
     setRuleExplanation(rule.explanation);
     setRuleFalsePositiveNote(rule.falsePositiveNote);
@@ -206,7 +209,7 @@ export const PolicyPage: React.FC = () => {
     if (!currentUser || !dataPolicy) return;
 
     // Validate safe regex against ReDoS catastrophic backtracking
-    const check = isSafeRegex(ruleRegex);
+    const check = isSafeRegex(ruleRegex, ruleFlags);
     if (!check.safe) {
       setRuleError(`Regex validation failed: ${check.error}`);
       return;
@@ -217,6 +220,7 @@ export const PolicyPage: React.FC = () => {
       rule_id: ruleId.trim(),
       category: ruleCategory.trim(),
       regex: ruleRegex.trim(),
+      flags: ruleFlags.trim() || 'g',
       severity: ruleSeverity,
       enabled: true,
       explanation: ruleExplanation.trim(),
@@ -392,8 +396,13 @@ export const PolicyPage: React.FC = () => {
                         {r.enabled ? 'Enabled' : 'Disabled'}
                       </button>
                     </td>
-                    <td className="py-3 px-4 font-mono text-[11px] text-slate-400 max-w-xs truncate">
-                      {r.regex}
+                    <td className="py-3 px-4 font-mono text-[11px] max-w-xs">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="text-slate-700 dark:text-slate-300 truncate">{r.regex}</span>
+                        <span className="shrink-0 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-indigo-600 dark:text-indigo-400 font-mono font-medium">
+                          /{r.flags || 'g'}
+                        </span>
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -631,18 +640,32 @@ export const PolicyPage: React.FC = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Regular Expression Pattern
-            </label>
-            <input
-              type="text"
-              required
-              value={ruleRegex}
-              onChange={(e) => setRuleRegex(e.target.value)}
-              placeholder="e.g. \\bPROJ-[A-Z0-9]{6}\\b"
-              className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-slate-900 dark:text-white"
-            />
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Regular Expression Pattern
+              </label>
+              <input
+                type="text"
+                required
+                value={ruleRegex}
+                onChange={(e) => setRuleRegex(e.target.value)}
+                placeholder="e.g. \\bPROJ-[A-Z0-9]{6}\\b"
+                className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-slate-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Regex Flags
+              </label>
+              <input
+                type="text"
+                value={ruleFlags}
+                onChange={(e) => setRuleFlags(e.target.value)}
+                placeholder="e.g. g, gi, gim"
+                className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-slate-900 dark:text-white"
+              />
+            </div>
           </div>
 
           <div>

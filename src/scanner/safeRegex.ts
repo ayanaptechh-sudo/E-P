@@ -6,10 +6,10 @@
 /**
  * Checks if a regex pattern contains dangerous nested repetition patterns that could lead to ReDoS.
  */
-export function isSafeRegex(pattern: string): { safe: boolean; error?: string } {
+export function isSafeRegex(pattern: string, flags?: string): { safe: boolean; error?: string } {
   try {
     // 1. Try compiling
-    new RegExp(pattern);
+    new RegExp(pattern, flags);
 
     // 2. Check for catastrophic nested quantifiers: (.*)+, ([a-z]+)*, (a+){2,}, etc.
     const dangerousNestedPattern = /\([^)]*(\+|\*|\{\d+,?\d*\})\)[*+]/;
