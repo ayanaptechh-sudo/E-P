@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Provide a compliant setter for window.fetch so browser extensions that assign to fetch do not crash
+      (function() {
+        try {
+          var currentFetch = window.fetch ? window.fetch.bind(window) : null;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return currentFetch;
+            },
+            set: function(val) {
+              currentFetch = val;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          try {
+            var proto = Object.getPrototypeOf(window);
+            if (proto && Object.getOwnPropertyDescriptor(proto, 'fetch')) {
+              var pFetch = proto.fetch;
+              Object.defineProperty(proto, 'fetch', {
+                get: function() { return pFetch; },
+                set: function(val) { pFetch = val; },
+                configurable: true,
+                enumerable: true
+              });
+            }
+          } catch (err2) {}
+        }
+
+        // Prevent external extension script errors from bubbling to the application error boundaries
+        window.addEventListener('error', function(e) {
+          if (e && e.filename && e.filename.indexOf('chrome-extension://') !== -1) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+      })();
+    </script>
+    <title>PromptShield — ShadowAI Leak Guard</title>
+    <meta name="description" content="Enterprise AI-usage monitoring and local sensitive-data DLP protection guardrail running 100% locally in-browser." />
+    <meta property="og:title" content="PromptShield — ShadowAI Leak Guard" />
+    <meta property="og:description" content="Enterprise AI-usage monitoring and local sensitive-data DLP protection guardrail running 100% locally in-browser." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
