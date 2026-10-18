@@ -1124,6 +1124,11 @@ export async function scanTextAsync(
         ? `Partial scan: rules ${failedRuleIds.join(', ')} failed`
         : undefined;
 
+    const resultDisclaimer =
+      resolvedMatches.length > 0
+        ? 'Review findings carefully. Automated pattern detection can produce false positives or miss unknown patterns.'
+        : 'No configured patterns matched. This does not mean the text is safe.';
+
     return {
       scan_status,
       totalMatches: resolvedMatches.length,
@@ -1133,7 +1138,7 @@ export async function scanTextAsync(
       matches: resolvedMatches,
       ruleMatches,
       durationMs,
-      disclaimer,
+      disclaimer: resultDisclaimer,
       failedRuleIds: failedRuleIds.length > 0 ? failedRuleIds : undefined,
       failureMessage,
     };

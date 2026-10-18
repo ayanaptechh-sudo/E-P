@@ -4,238 +4,288 @@
  */
 
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../services/authContext';
 
-export const SetupPage: React.FC = () => {
-  const { setupAdmin } = useAuth();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [department, setDepartment] = useState('Information Security');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await setupAdmin(username, password, department);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Setup failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 text-slate-100 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex items-center justify-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-          </div>
-          <span className="text-xl font-bold tracking-tight text-white">PromptShield</span>
-        </div>
-        <h2 className="mt-4 text-center text-2xl font-bold tracking-tight text-white">
-          Initialize Guardrail Environment
-        </h2>
-        <p className="mt-1 text-center text-xs text-slate-400">
-          First-time setup. Create your master Administrator account to seed database policies and AI tool catalog.
-        </p>
-      </div>
-
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-slate-900 py-8 px-6 shadow-xl border border-slate-800 rounded-2xl sm:px-10">
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {error && (
-              <div className="p-3 bg-rose-950/50 border border-rose-800 rounded-lg text-xs text-rose-300">
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Admin Username
-              </label>
-              <input
-                type="text"
-                required
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Department
-              </label>
-              <input
-                type="text"
-                required
-                value={department}
-                onChange={e => setDepartment(e.target.value)}
-                className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Admin Password
-              </label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
-                className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <span className="text-[11px] text-slate-500 mt-1 block">
-                Hashed locally using Web Crypto PBKDF2-SHA256 (210,000 iterations).
-              </span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Initializing Database...' : 'Initialize & Launch PromptShield'}
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-6 border-t border-slate-800 pt-4 text-center text-[11px] text-slate-500">
-            100% In-Browser SQLite WASM + IndexedDB persistence. Zero external API calls.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export const LoginPage: React.FC = () => {
-  const { login, isFirstRun } = useAuth();
-  if (isFirstRun) {
-    return <SetupPage />;
-  }
-  const [username, setUsername] = useState('admin');
+  const { login, setupAdmin, isFirstRun } = useAuth();
+  const [email, setEmail] = useState('admin@promptshield.com');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showForgotNotice, setShowForgotNotice] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setShowForgotNotice(false);
+
+    if (!email.trim()) {
+      setError('Please enter your email address.');
+      return;
+    }
+
+    if (!password) {
+      setError('Please enter your password.');
+      return;
+    }
+
     try {
       setLoading(true);
-      await login(username, password);
+      if (isFirstRun) {
+        // Automatic master administrator setup in airgap environment
+        const username = email.includes('@') ? email.split('@')[0] : email.trim();
+        await setupAdmin(username, password, 'Information Security');
+      } else {
+        // Attempt login with given email or username prefix
+        try {
+          await login(email.trim(), password);
+        } catch (firstErr) {
+          if (email.includes('@')) {
+            const username = email.split('@')[0];
+            await login(username, password);
+          } else {
+            throw firstErr;
+          }
+        }
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed.');
+      setError(err instanceof Error ? err.message : 'Invalid credentials. Please verify your password.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 text-slate-100 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex items-center justify-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-          </div>
-          <span className="text-xl font-bold tracking-tight text-white">PromptShield</span>
-        </div>
-        <h2 className="mt-4 text-center text-2xl font-bold tracking-tight text-white">
-          ShadowAI Leak Guard Sign In
-        </h2>
-        <p className="mt-1 text-center text-xs text-slate-400">
-          Local client-side AI usage monitoring and sensitive DLP protection
-        </p>
+    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#0A4296] via-[#062B6D] to-[#031B4D] font-sans antialiased selection:bg-emerald-400 selection:text-black">
+      {/* =========================================================================
+          1. 3D ABSTRACT TUBULAR & FLUID BACKGROUND SHAPES
+         ========================================================================= */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* Soft atmospheric depth lights */}
+        <div className="absolute top-1/4 -left-20 w-96 h-96 rounded-full bg-blue-500/25 blur-3xl" />
+        <div className="absolute bottom-1/4 -right-20 w-[30rem] h-[30rem] rounded-full bg-cyan-400/20 blur-3xl" />
+        <div className="absolute -top-32 right-1/4 w-[28rem] h-[28rem] rounded-full bg-indigo-600/30 blur-[100px]" />
+
+        {/* 3D Floating Tubular Curved Ribbons (SVG Gradients) */}
+        <motion.div
+          animate={{
+            y: [-15, 15, -15],
+            rotate: [0, 6, 0],
+          }}
+          transition={{
+            duration: 16,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+          className="absolute -top-16 -left-12 w-[600px] h-[600px] opacity-80"
+        >
+          <svg viewBox="0 0 600 600" fill="none" className="w-full h-full">
+            <defs>
+              <linearGradient id="fluidGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#2563EB" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#1E1B4B" stopOpacity="0.1" />
+              </linearGradient>
+              <filter id="glow1" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="18" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+            <path
+              d="M120 180 C 220 80, 420 120, 480 260 C 540 400, 360 520, 240 480 C 120 440, 40 280, 120 180 Z"
+              fill="url(#fluidGrad1)"
+              filter="url(#glow1)"
+            />
+          </svg>
+        </motion.div>
+
+        {/* Second 3D Tubular Torus / Fluid Blob */}
+        <motion.div
+          animate={{
+            y: [20, -20, 20],
+            rotate: [0, -8, 0],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+          className="absolute -bottom-24 -right-16 w-[680px] h-[680px] opacity-75"
+        >
+          <svg viewBox="0 0 680 680" fill="none" className="w-full h-full">
+            <defs>
+              <linearGradient id="fluidGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#06B6D4" stopOpacity="0.75" />
+                <stop offset="45%" stopColor="#1D4ED8" stopOpacity="0.55" />
+                <stop offset="100%" stopColor="#0F172A" stopOpacity="0.1" />
+              </linearGradient>
+              <filter id="glow2" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="24" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+            <path
+              d="M480 160 C 600 240, 620 440, 500 540 C 380 640, 180 580, 140 440 C 100 300, 340 80, 480 160 Z"
+              fill="url(#fluidGrad2)"
+              filter="url(#glow2)"
+            />
+          </svg>
+        </motion.div>
+
+        {/* Ambient 3D Depth Sphere */}
+        <motion.div
+          animate={{
+            scale: [1, 1.08, 1],
+            opacity: [0.35, 0.5, 0.35],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full bg-radial from-blue-400/20 via-cyan-600/10 to-transparent blur-2xl"
+        />
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-slate-900 py-8 px-6 shadow-xl border border-slate-800 rounded-2xl sm:px-10">
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {error && (
-              <div className="p-3 bg-rose-950/60 border border-rose-800 rounded-lg text-xs text-rose-300">
-                {error}
-              </div>
-            )}
+      {/* =========================================================================
+          2. THE LOGIN CARD (FROSTED GLASSMORPHISM)
+         ========================================================================= */}
+      <motion.div
+        initial={{ opacity: 0, y: 18, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="relative z-10 w-full max-w-md mx-4 p-8 sm:p-10 rounded-2xl bg-white/10 backdrop-blur-2xl border border-white/20 shadow-2xl shadow-black/40 text-white"
+      >
+        {/* Brand Header */}
+        <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.4)]">
+            <Shield className="w-4 h-4 text-emerald-400" />
+          </div>
+          <span className="text-sm font-semibold tracking-wide text-white/90">
+            PromptShield
+          </span>
+        </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Username
-              </label>
-              <input
-                type="text"
-                required
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
+        {/* Heading */}
+        <h1 className="text-3xl font-bold mb-6 text-white tracking-tight">
+          Login
+        </h1>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Password
-              </label>
+        {/* Error Alert */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-5 p-3 rounded-lg bg-rose-500/20 border border-rose-400/40 text-rose-100 text-xs flex items-start gap-2.5 backdrop-blur-md"
+          >
+            <AlertCircle className="w-4 h-4 text-rose-300 shrink-0 mt-0.5" />
+            <span className="leading-relaxed">{error}</span>
+          </motion.div>
+        )}
+
+        {/* Forgot Password Notification Banner */}
+        {showForgotNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-5 p-3 rounded-lg bg-blue-500/20 border border-blue-400/40 text-blue-100 text-xs leading-relaxed backdrop-blur-md"
+          >
+            <div className="font-semibold text-white mb-0.5">Airgap Security Policy</div>
+            Offline DLP mode is active. Password reset keys must be provisioned directly by your Security Administrator.
+          </motion.div>
+        )}
+
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Email Field */}
+          <div>
+            <label
+              htmlFor="email-input"
+              className="block text-white text-sm font-medium mb-1.5"
+            >
+              Email
+            </label>
+            <input
+              id="email-input"
+              type="text"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@promptshield.com"
+              className="w-full px-4 py-2.5 bg-white text-slate-900 placeholder:text-slate-400 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-300 transition-shadow shadow-inner"
+            />
+          </div>
+
+          {/* Password Field */}
+          <div>
+            <label
+              htmlFor="password-input"
+              className="block text-white text-sm font-medium mb-1.5"
+            >
+              Password
+            </label>
+            <div className="relative">
               <input
-                type="password"
-                required
+                id="password-input"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full px-4 py-2.5 pr-11 bg-white text-slate-900 placeholder:text-slate-400 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-300 transition-shadow shadow-inner"
               />
-            </div>
-
-            <div className="pt-2">
               <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-50"
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 transition-colors p-1 cursor-pointer"
+                title={showPassword ? 'Hide password' : 'Show password'}
+                aria-label="Toggle password visibility"
               >
-                {loading ? 'Verifying Credentials...' : 'Sign In'}
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
               </button>
             </div>
-          </form>
 
-          <div className="mt-6 border-t border-slate-800 pt-4 text-center text-[11px] text-slate-500">
-            Account lock protection active after 5 failed attempts (5 min cooldown).
+            {/* Forgot Password Link */}
+            <div className="flex justify-end mt-2">
+              <button
+                type="button"
+                onClick={() => setShowForgotNotice(true)}
+                className="text-xs text-white/70 hover:text-white transition-opacity cursor-pointer font-normal underline-offset-2 hover:underline"
+              >
+                Forgot Password?
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+
+          {/* Submit Button */}
+          <div className="pt-1">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 px-4 rounded-lg bg-[#0A192F] hover:bg-[#071326] active:scale-[0.99] text-white font-medium text-sm shadow-xl shadow-black/30 hover:scale-[1.02] transition-transform duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  <span>Verifying Credentials...</span>
+                </>
+              ) : (
+                <span>Sign in</span>
+              )}
+            </button>
+          </div>
+        </form>
+      </motion.div>
     </div>
   );
 };
+
+export const SetupPage: React.FC = LoginPage;
+export default LoginPage;

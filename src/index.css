@@ -1,1 +1,34 @@
 @import "tailwindcss";
+
+@layer utilities {
+  @keyframes breatheGlow {
+    0%, 100% {
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.35), 0 0 30px rgba(16, 185, 129, 0.15);
+      transform: scale(1);
+    }
+    50% {
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.65), 0 0 45px rgba(16, 185, 129, 0.3);
+      transform: scale(1.01);
+    }
+  }
+
+  .animate-breathe-glow {
+    animation: breatheGlow 2.8s infinite ease-in-out;
+  }
+}
+
+/* Custom dark scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(11, 15, 25, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.5);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(71, 85, 105, 0.8);
+}
