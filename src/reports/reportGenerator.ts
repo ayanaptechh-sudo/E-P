@@ -118,7 +118,7 @@ export function generateUsageReportHtml(data: UsageReportData): string {
     </thead>
     <tbody>
       ${data.categoriesDetected.length === 0
-        ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">No sensitive data findings recorded during this audit window.</td></tr>'
+        ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">No configured patterns matched. This does not mean the text is safe.</td></tr>'
         : data.categoriesDetected.map(c => `
           <tr>
             <td><strong>${c.category}</strong></td>
@@ -344,7 +344,7 @@ export function generateUsageReportPdf(data: UsageReportData): Uint8Array {
   autoTable(doc, {
     startY: 66,
     head: [['Sensitive Data Category', 'Occurrences', 'Percentage']],
-    body: tableData.length > 0 ? tableData : [['No sensitive patterns detected during period', '0', '0%']],
+    body: tableData.length > 0 ? tableData : [['No configured patterns matched. This does not mean the text is safe.', '0', '0%']],
     theme: 'striped',
     styles: { fontSize: 8, textColor: [30, 41, 59] },
     headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' },

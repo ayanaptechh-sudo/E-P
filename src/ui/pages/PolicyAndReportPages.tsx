@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../services/authContext';
 import { policyRepo } from '../../database/repositories/policyRepo';
 import { userRepo, auditRepo } from '../../database/repositories/userRepo';
 import { toolRepo } from '../../database/repositories/toolRepo';
 import { scanRepo } from '../../database/repositories/scanRepo';
 import { usageRepo } from '../../database/repositories/usageRepo';
-import { reportRepo } from '../../database/repositories/reportRepo';
+import { reportRepo, settingsRepo } from '../../database/repositories/reportRepo';
 import { Policy, SeverityLevel, ReportRecord } from '../../database/types';
 import {
   BALANCED_TEMPLATE,
@@ -18,6 +18,9 @@ import {
   EDUCATION_TEMPLATE,
   ScannerRuleConfig,
   PolicyTemplate,
+  DEFAULT_CREDENTIAL_KEYWORDS,
+  DEFAULT_HINGLISH_WORDS,
+  DEFAULT_PLACEHOLDERS,
 } from '../../core/defaultPolicies';
 import { isSafeRegex } from '../../scanner/safeRegex';
 import { Modal } from '../components/DataTable';
@@ -38,8 +41,8 @@ export const PolicyPage: React.FC = () => {
   const alertPolicy = useMemo(() => policyRepo.getLatest('pol_alert_thresholds'), [refreshKey]);
   const retentionPolicy = useMemo(() => policyRepo.getLatest('pol_retention'), [refreshKey]);
 
-  // Active Tab: templates | categories | thresholds | retention | history
-  const [activeTab, setActiveTab] = useState<'templates' | 'categories' | 'thresholds' | 'retention' | 'history'>('categories');
+  // Active Tab: templates | categories | thresholds | retention | history | keywords
+  const [activeTab, setActiveTab] = useState<'templates' | 'categories' | 'thresholds' | 'retention' | 'history' | 'keywords'>('categories');
 
   // Scanner Rules editing state
   const rulesList: ScannerRuleConfig[] = useMemo(() => {
@@ -63,11 +66,112 @@ export const PolicyPage: React.FC = () => {
   const [ruleFalsePositiveNote, setRuleFalsePositiveNote] = useState('');
   const [ruleError, setRuleError] = useState<string | null>(null);
 
+  // Keyword & Placeholder Settings State
+  const [extraKeywordsInput, setExtraKeywordsInput] = useState('');
+  const [credKeywordsInput, setCredKeywordsInput] = useState('');
+  const [hinglishInput, setHinglishInput] = useState('');
+  const [placeholdersInput, setPlaceholdersInput] = useState('');
+  const [keywordsSavedMsg, setKeywordsSavedMsg] = useState<string | null>(null);
+
   // Success Notice
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
   const reload = () => {
     setRefreshKey(k => k + 1);
+  };
+
+  // Load configured dictionaries from settingsRepo or fallback to defaults
+  useEffect(() => {
+    try {
+      const storedExtra = settingsRepo.get('extra_credential_keywords', '');
+      const extraList = storedExtra ? JSON.parse(storedExtra) : [];
+      setExtraKeywordsInput(Array.isArray(extraList) ? extraList.join(', ') : '');
+
+      const storedCred = settingsRepo.get('credential_keywords', '');
+      const credList = storedCred ? JSON.parse(storedCred) : DEFAULT_CREDENTIAL_KEYWORDS;
+      setCredKeywordsInput(Array.isArray(credList) ? credList.join(', ') : DEFAULT_CREDENTIAL_KEYWORDS.join(', '));
+
+      const storedHinglish = settingsRepo.get('hinglish_keywords', '');
+      const hingList = storedHinglish ? JSON.parse(storedHinglish) : DEFAULT_HINGLISH_WORDS;
+      setHinglishInput(Array.isArray(hingList) ? hingList.join(', ') : DEFAULT_HINGLISH_WORDS.join(', '));
+
+      const storedPh = settingsRepo.get('known_placeholders', '');
+      const phList = storedPh ? JSON.parse(storedPh) : DEFAULT_PLACEHOLDERS;
+      setPlaceholdersInput(Array.isArray(phList) ? phList.join(', ') : DEFAULT_PLACEHOLDERS.join(', '));
+    } catch {
+      setExtraKeywordsInput('');
+      setCredKeywordsInput(DEFAULT_CREDENTIAL_KEYWORDS.join(', '));
+      setHinglishInput(DEFAULT_HINGLISH_WORDS.join(', '));
+      setPlaceholdersInput(DEFAULT_PLACEHOLDERS.join(', '));
+    }
+  }, [refreshKey]);
+
+  const handleSaveKeywords = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    const extraArr = extraKeywordsInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const credArr = credKeywordsInput
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const hingArr = hinglishInput
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const phArr = placeholdersInput
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+
+    await settingsRepo.set('extra_credential_keywords', JSON.stringify(extraArr));
+    await settingsRepo.set('credential_keywords', JSON.stringify(credArr));
+    await settingsRepo.set('hinglish_keywords', JSON.stringify(hingArr));
+    await settingsRepo.set('known_placeholders', JSON.stringify(phArr));
+
+    await auditRepo.log({
+      user_id: currentUser.user_id,
+      action: 'POLICY_KEYWORDS_UPDATED',
+      target_type: 'policy',
+      target_id: 'settings_keywords',
+      outcome: 'Success',
+      details: `Updated detection dictionaries: ${extraArr.length} extra keywords, ${credArr.length} credential keywords, ${hingArr.length} Hinglish words, ${phArr.length} placeholders.`,
+    });
+
+    setKeywordsSavedMsg('Detection dictionaries and placeholders saved successfully!');
+    setTimeout(() => setKeywordsSavedMsg(null), 3500);
+    reload();
+  };
+
+  const handleResetKeywordsToDefault = async () => {
+    if (!currentUser) return;
+    if (!confirm('Reset all credential keywords, Hinglish words, and placeholders to default?')) return;
+
+    await settingsRepo.set('extra_credential_keywords', JSON.stringify([]));
+    await settingsRepo.set('credential_keywords', JSON.stringify(DEFAULT_CREDENTIAL_KEYWORDS));
+    await settingsRepo.set('hinglish_keywords', JSON.stringify(DEFAULT_HINGLISH_WORDS));
+    await settingsRepo.set('known_placeholders', JSON.stringify(DEFAULT_PLACEHOLDERS));
+
+    setExtraKeywordsInput('');
+    setCredKeywordsInput(DEFAULT_CREDENTIAL_KEYWORDS.join(', '));
+    setHinglishInput(DEFAULT_HINGLISH_WORDS.join(', '));
+    setPlaceholdersInput(DEFAULT_PLACEHOLDERS.join(', '));
+
+    await auditRepo.log({
+      user_id: currentUser.user_id,
+      action: 'POLICY_KEYWORDS_RESET',
+      target_type: 'policy',
+      target_id: 'settings_keywords',
+      outcome: 'Success',
+      details: 'Reset detection dictionaries and placeholders to factory defaults.',
+    });
+
+    setKeywordsSavedMsg('Reset keywords and placeholders to factory defaults.');
+    setTimeout(() => setKeywordsSavedMsg(null), 3500);
+    reload();
   };
 
   const handleApplyTemplate = async (template: PolicyTemplate) => {
@@ -208,8 +312,14 @@ export const PolicyPage: React.FC = () => {
     e.preventDefault();
     if (!currentUser || !dataPolicy) return;
 
+    // Normalize flags (lowercase, valid JS regex flags, always include 'g')
+    const cleanedFlags = (ruleFlags || 'g').toLowerCase().replace(/[^gimsuy]/g, '');
+    const flagsSet = new Set(cleanedFlags.split(''));
+    flagsSet.add('g');
+    const normalizedFlags = Array.from(flagsSet).join('');
+
     // Validate safe regex against ReDoS catastrophic backtracking
-    const check = isSafeRegex(ruleRegex, ruleFlags);
+    const check = isSafeRegex(ruleRegex, normalizedFlags);
     if (!check.safe) {
       setRuleError(`Regex validation failed: ${check.error}`);
       return;
@@ -220,7 +330,7 @@ export const PolicyPage: React.FC = () => {
       rule_id: ruleId.trim(),
       category: ruleCategory.trim(),
       regex: ruleRegex.trim(),
-      flags: ruleFlags.trim() || 'g',
+      flags: normalizedFlags,
       severity: ruleSeverity,
       enabled: true,
       explanation: ruleExplanation.trim(),
@@ -332,6 +442,16 @@ export const PolicyPage: React.FC = () => {
             }`}
           >
             Retention
+          </button>
+          <button
+            onClick={() => setActiveTab('keywords')}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+              activeTab === 'keywords'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
+          >
+            Keywords & Placeholders
           </button>
         </div>
       </div>
@@ -580,6 +700,110 @@ export const PolicyPage: React.FC = () => {
         </div>
       )}
 
+      {/* Tab: Keywords & Placeholders */}
+      {activeTab === 'keywords' && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs max-w-3xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Proximity Dictionaries & Exclusions
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Configure credential triggers, romanized/Hinglish phrasing, and placeholder exclusions.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleResetKeywordsToDefault}
+              className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+            >
+              Reset to Factory Defaults
+            </button>
+          </div>
+
+          {keywordsSavedMsg && (
+            <div className="mb-4 p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-800 dark:text-emerald-300">
+              {keywordsSavedMsg}
+            </div>
+          )}
+
+          <form onSubmit={handleSaveKeywords} className="space-y-6">
+            <div>
+              <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-1">
+                Extra Credential Keywords (Comma-Separated)
+              </label>
+              <p className="text-[11px] text-slate-500 mb-2">
+                Custom organization-specific credential keywords supplied directly to context detection (e.g. internal_key, project_token, vault_secret). Default is empty.
+              </p>
+              <textarea
+                value={extraKeywordsInput}
+                onChange={(e) => setExtraKeywordsInput(e.target.value)}
+                rows={2}
+                className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="internal_token, project_auth, client_vault..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-1">
+                Credential Trigger Keywords (Comma-Separated)
+              </label>
+              <p className="text-[11px] text-slate-500 mb-2">
+                Triggers candidate token inspection when positioned within 60 characters before or after on the same line or sentence.
+              </p>
+              <textarea
+                value={credKeywordsInput}
+                onChange={(e) => setCredKeywordsInput(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="api key, apikey, password, token, secret..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-1">
+                Hinglish / Romanized Phrasing Keywords (Comma-Separated)
+              </label>
+              <p className="text-[11px] text-slate-500 mb-2">
+                Romanized Hindi/Urdu context words (e.g. &quot;meri api key ye hai&quot;, &quot;password hai&quot;, &quot;token ye raha&quot;).
+              </p>
+              <textarea
+                value={hinglishInput}
+                onChange={(e) => setHinglishInput(e.target.value)}
+                rows={2}
+                className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="meri, mera, mere, ye, yeh, hai, raha, hoga..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-1">
+                Known Dummy Placeholders & Exclusions (Exact Match Only)
+              </label>
+              <p className="text-[11px] text-slate-500 mb-2">
+                Exact values matching these tokens are never flagged or reported (substring matches like &quot;sk-test1234&quot; are always retained).
+              </p>
+              <textarea
+                value={placeholdersInput}
+                onChange={(e) => setPlaceholdersInput(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="changeme, your_api_key, example, test123, <api_key>..."
+              />
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer"
+              >
+                Save Dictionaries & Placeholders
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Add / Edit Rule Modal */}
       <Modal
         isOpen={isRuleModalOpen}
@@ -665,6 +889,9 @@ export const PolicyPage: React.FC = () => {
                 placeholder="e.g. g, gi, gim"
                 className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-slate-900 dark:text-white"
               />
+              <span className="text-[10px] text-slate-400 mt-0.5 block">
+                Flag "g" is always enforced. Inline flags like (?i) or (?m) are not supported.
+              </span>
             </div>
           </div>
 

@@ -385,13 +385,19 @@ function createSchema(db: Database) {
   `);
 }
 
+let txDepth = 0;
+
 /**
  * Persist SQLite binary to IndexedDB
  */
 export async function persistDb(): Promise<void> {
   if (!dbInstance) return;
+  if (txDepth > 0) return; // return early while in transaction
   try {
     const binary = dbInstance.export();
+    try {
+      dbInstance.run('PRAGMA foreign_keys = ON;');
+    } catch {}
     await saveToIndexedDB(binary);
   } catch (err) {
     console.warn('persistDb export warning:', err);
@@ -433,14 +439,27 @@ export async function execute(
  */
 export async function transaction<T>(fn: () => T | Promise<T>): Promise<T> {
   if (!dbInstance) throw new Error('Database not initialized');
-  dbInstance.run('BEGIN TRANSACTION;');
+  txDepth++;
+  if (txDepth === 1) {
+    dbInstance.run('BEGIN TRANSACTION;');
+  }
   try {
     const result = await fn();
-    dbInstance.run('COMMIT;');
-    await persistDb();
+    txDepth--;
+    if (txDepth === 0) {
+      dbInstance.run('COMMIT;');
+      await persistDb();
+    }
     return result;
   } catch (err) {
-    dbInstance.run('ROLLBACK;');
+    txDepth--;
+    if (txDepth === 0) {
+      try {
+        dbInstance.run('ROLLBACK;');
+      } catch (rollbackErr) {
+        console.warn('Transaction rollback failed (preserved original error):', rollbackErr);
+      }
+    }
     throw err;
   }
 }
@@ -450,7 +469,11 @@ export async function transaction<T>(fn: () => T | Promise<T>): Promise<T> {
  */
 export function exportDatabase(): Uint8Array {
   if (!dbInstance) throw new Error('Database not initialized');
-  return dbInstance.export();
+  const binary = dbInstance.export();
+  try {
+    dbInstance.run('PRAGMA foreign_keys = ON;');
+  } catch {}
+  return binary;
 }
 
 /**

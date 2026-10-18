@@ -30,25 +30,66 @@ export interface RedactionResult {
   disclaimer: string;
 }
 
-function getPlaceholder(kind: PlaceholderKind, keyPrefix?: string): string {
+function getPlaceholder(
+  text: string,
+  spanStart: number,
+  category: string,
+  kind?: PlaceholderKind,
+  keyPrefix?: string
+): string {
+  if (keyPrefix) {
+    return `${keyPrefix}[SECRET REDACTED]`;
+  }
+
+  // Exact replacement text by category:
+  switch (category) {
+    case 'Password/API Key':
+    case 'API Keys & Secrets':
+    case 'Password Assignments':
+      return '[SECRET REDACTED]';
+    case 'National ID':
+      return 'ID: XXXXX-XXXXXXX-X';
+    case 'Personal ID':
+      return '[ID REDACTED]';
+    case 'Phone Number':
+      return '[PHONE REDACTED]';
+    case 'Bank Account / IBAN':
+      return '[ACCOUNT REDACTED]';
+    case 'Payment Cards':
+      return '[CARD NUMBER REDACTED]';
+    case 'Email Lists':
+      return '[EMAIL REDACTED]';
+    case 'Passport':
+      return '[PASSPORT REDACTED]';
+    case 'SSN':
+      return '[SSN REDACTED]';
+    case 'Date of Birth':
+      return '[DOB REDACTED]';
+    case 'Confidentiality Labels':
+      return '[CONFIDENTIAL CONTENT REMOVED]';
+    default:
+      break;
+  }
+
   switch (kind) {
     case 'cnic':
       return 'ID: XXXXX-XXXXXXX-X';
     case 'email':
       return '[EMAIL REDACTED]';
     case 'api_key':
-      return '[API KEY REDACTED]';
     case 'password':
-      return `${keyPrefix || 'password='}[REDACTED]`;
+    case 'possible_secret':
+      return '[SECRET REDACTED]';
+    case 'phone':
+      return '[PHONE REDACTED]';
+    case 'iban':
+      return '[ACCOUNT REDACTED]';
     case 'card':
       return '[CARD NUMBER REDACTED]';
     case 'confidential':
       return '[CONFIDENTIAL CONTENT REMOVED]';
-    case 'possible_secret':
-      return '[POSSIBLE SECRET REDACTED]';
-    case 'custom':
     default:
-      return '[SENSITIVE DATA REDACTED]';
+      return '[SECRET REDACTED]';
   }
 }
 
@@ -83,7 +124,7 @@ export function redactText(text: string, matches: ScanMatchOffset[]): RedactionR
     const end = Math.max(start, Math.min(m.end, text.length));
     if (start === end) continue;
 
-    const replacement = getPlaceholder(m.placeholderType, m.keyPrefix);
+    const replacement = getPlaceholder(text, start, m.category, m.placeholderType, m.keyPrefix);
 
     if (mergedSpans.length === 0) {
       mergedSpans.push({

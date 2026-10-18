@@ -36,12 +36,99 @@ export interface PolicyTemplate {
   };
 }
 
+export const DEFAULT_CREDENTIAL_KEYWORDS: string[] = [
+  'api key',
+  'apikey',
+  'api_key',
+  'key',
+  'token',
+  'secret',
+  'password',
+  'passcode',
+  'pass',
+  'pwd',
+  'pin',
+  'otp',
+  'cvv',
+  'cvc',
+  'auth',
+  'credentials',
+  'login',
+];
+
+export const DEFAULT_HINGLISH_WORDS: string[] = [
+  'meri',
+  'mera',
+  'mere',
+  'ye',
+  'yeh',
+  'hai',
+  'raha',
+  'hoga',
+  'wala',
+  'wali',
+  'bhejo',
+  'de',
+  'lo',
+];
+
+export const DEFAULT_PLACEHOLDERS: string[] = [
+  'changeme',
+  'your_api_key',
+  'your_password',
+  'your_secret',
+  'your_token',
+  'xxxx',
+  'example',
+  'test123',
+  '<api_key>',
+  '<your_api_key>',
+  'placeholder',
+  'null',
+  'undefined',
+];
+
+export const RULES_VERSION = 4;
+
 export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
+  {
+    rule_id: 'rule_api_keys',
+    category: 'API Keys & Secrets',
+    // Known key patterns: OpenAI sk-, Stripe sk_live_/pk_live_, AWS AKIA, Google AIza, GitHub ghp/gho/github_pat, Slack xox, JWT, Bearer tokens, PEM headers
+    regex: '\\b(?:sk-[a-zA-Z0-9_\\-]{8,}|sk_live_[a-zA-Z0-9]{20,}|pk_live_[a-zA-Z0-9]{20,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_\\-]{35}|(?:ghp|gho|github_pat)_[a-zA-Z0-9_]{36,}|xox[baprs]-[0-9a-zA-Z\\-]{10,}|eyJ[a-zA-Z0-9_\\-]{10,}\\.eyJ[a-zA-Z0-9_\\-]{10,}\\.[a-zA-Z0-9_\\-]{10,}|Bearer\\s+[a-zA-Z0-9_\\-\\.\\%]{20,})\\b|-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----',
+    flags: 'g',
+    severity: 'Critical',
+    enabled: true,
+    explanation: 'Detected known-format production API key, cloud access token, JWT, or private cryptographic key.',
+    falsePositiveNote: 'Sanitized dummy keys or tutorial tokens inside documentation.',
+  },
+  {
+    rule_id: 'rule_database_uri',
+    category: 'API Keys & Secrets',
+    // Database connection strings containing embedded credentials
+    regex: '\\b(?:mongodb(?:\\+srv)?|postgres(?:ql)?|mysql|redis):\\/\\/[a-zA-Z0-9_\\-\\.\\%]+:[a-zA-Z0-9_\\-\\.\\%]+@[^\\s"\'`]+\\b',
+    flags: 'g',
+    severity: 'Critical',
+    enabled: true,
+    explanation: 'Detected database connection URI with embedded authentication credentials.',
+    falsePositiveNote: 'Local test connection strings with dummy passwords.',
+  },
+  {
+    rule_id: 'rule_payment_card',
+    category: 'Payment Cards',
+    // 13 to 19 digits with optional spaces, dashes, or dots; must pass Luhn check
+    regex: '\\b(?:\\d[\\s\\-\\.]?){13,19}\\b',
+    flags: 'g',
+    severity: 'Critical',
+    enabled: true,
+    explanation: 'Detected payment card primary account number (PAN) passing Luhn checksum.',
+    falsePositiveNote: 'Random numbers formatted like cards may coincidentally pass the Luhn algorithm.',
+  },
   {
     rule_id: 'rule_national_id_cnic',
     category: 'National ID',
-    // Matches Pakistani CNIC standard format 12345-1234567-1 or 13 consecutive digits
-    regex: '\\b\\d{5}-\\d{7}-\\d\\b|\\b\\d{13}\\b',
+    // Matches Pakistani CNIC format: 35202-1234567-1, 3520212345671, or "35202 1234567 1"
+    regex: '\\b\\d{5}[-\\s]?\\d{7}[-\\s]?\\d\\b',
     flags: 'g',
     severity: 'High',
     enabled: true,
@@ -49,15 +136,37 @@ export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
     falsePositiveNote: '13-digit numbers could represent barcode SKUs or invoice tracking numbers.',
   },
   {
-    rule_id: 'rule_payment_card',
-    category: 'Payment Cards',
-    // 13 to 19 digits with optional spaces or hyphens; must pass Luhn check
-    regex: '\\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|6(?:011|5[0-9]{2})[0-9]{12}|(?:2131|1800|35\\d{3})\\d{11}|(?:[0-9]{4}[-\\s]?){3,4}[0-9]{1,4})\\b',
-    flags: 'g',
-    severity: 'Critical',
+    rule_id: 'rule_iban',
+    category: 'Banking & Financial',
+    // Pakistani IBAN (PK + 22 alphanumerics = 24 chars) with optional spacing
+    regex: '\\bPK\\d{2}(?:[\\s]?[A-Z0-9]{4}){5}\\b|\\bPK\\d{2}[A-Za-z0-9]{20}\\b',
+    flags: 'gi',
+    severity: 'High',
     enabled: true,
-    explanation: 'Detected payment card primary account number (PAN) passing Luhn checksum.',
-    falsePositiveNote: 'Random numbers formatted like cards may coincidentally pass the Luhn algorithm.',
+    explanation: 'Detected International Bank Account Number (IBAN).',
+    falsePositiveNote: 'Sample account numbers from banking documentation or tests.',
+  },
+  {
+    rule_id: 'rule_phone_pk',
+    category: 'Phone Numbers',
+    // Pakistani phone numbers with and without separators (0300-1234567, 03001234567, +92 300 1234567, 0092...)
+    regex: '(?:\\+92|\\b0092|\\b0)[-\\s]?(?:3\\d{2})[-\\s]?\\d{7}\\b',
+    flags: 'g',
+    severity: 'Medium',
+    enabled: true,
+    explanation: 'Detected Pakistani mobile phone number format.',
+    falsePositiveNote: 'Public business contact numbers or directory listings.',
+  },
+  {
+    rule_id: 'rule_cvv_otp_pin',
+    category: 'Payment Cards',
+    // CVV / OTP / PIN only when immediately next to those keywords
+    regex: '\\b(?:cvv|cvc|otp|pin|passcode)\\s*[:=]?\\s*\\d{3,6}\\b|\\b\\d{3,6}\\s*(?:is\\s+my\\s+)?(?:cvv|cvc|otp|pin|passcode)\\b',
+    flags: 'gi',
+    severity: 'High',
+    enabled: true,
+    explanation: 'Detected card security code (CVV/CVC) or one-time verification passcode (OTP/PIN).',
+    falsePositiveNote: 'Postal codes or port numbers positioned near security keywords.',
   },
   {
     rule_id: 'rule_email_list',
@@ -71,15 +180,15 @@ export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
     falsePositiveNote: 'Public contact emails, support addresses, or documentation examples.',
   },
   {
-    rule_id: 'rule_api_keys',
-    category: 'API Keys & Secrets',
-    // Known key patterns: OpenAI sk-, Stripe sk_live_/pk_live_, AWS AKIA, Google AIza, GitHub ghp/gho/github_pat, Slack xox, JWT, Bearer tokens, PEM headers
-    regex: '\\b(?:sk-[a-zA-Z0-9]{20,}|sk_live_[a-zA-Z0-9]{24,}|pk_live_[a-zA-Z0-9]{24,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|(?:ghp|gho|github_pat)_[a-zA-Z0-9_]{36,}|xox[baprs]-[0-9a-zA-Z-]+|eyJ[a-zA-Z0-9_-]{10,}\\.eyJ[a-zA-Z0-9_-]{10,}\\.[a-zA-Z0-9_-]{10,}|Bearer\\s+[a-zA-Z0-9_\\-\\.]{20,})\\b|-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----',
-    flags: 'g',
-    severity: 'Critical',
+    rule_id: 'rule_keyword_proximity',
+    category: 'Password/API Key',
+    // Layered bidirectional proximity matching with credential and Hinglish keywords
+    regex: '\\b(?:my\\s+api\\s+key\\s+is|api\\s+key\\s*[:=]|api\\s+key\\s+is|the\\s+password\\s+is|my\\s+token\\s+is|secret\\s+key\\s+is|pass\\s+is|pwd\\s+is|meri\\s+api\\s+key\\s+ye\\s+hai|password\\s+hai|mera\\s+password\\s+hai|pass\\s+ye\\s+hai|token\\s+ye\\s+raha)\\s*(?:["\'`]([^"\'`\\r\\n]{6,})["\'`]|([^"\'`\\s\\r\\n]{6,}))',
+    flags: 'gi',
+    severity: 'High',
     enabled: true,
-    explanation: 'Detected production API key, cloud access token, JWT, or private cryptographic key.',
-    falsePositiveNote: 'Sanitized dummy keys or tutorial tokens inside markdown code blocks.',
+    explanation: 'Detected conversational or proximity-based credential disclosure.',
+    falsePositiveNote: 'Documentation examples or placeholder values (e.g. changeme, your_api_key).',
   },
   {
     rule_id: 'rule_password_assignments',
@@ -93,32 +202,21 @@ export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
     falsePositiveNote: 'Placeholder values like "changeme", "your_password", or template variables.',
   },
   {
-    rule_id: 'rule_credential_labels',
-    category: 'Credential Labels',
-    // username: with password: nearby or "login credentials" - removed inline (?i)
-    regex: '(?:login\\s+credentials|username\\s*:[^\\n]+\\s*password\\s*:|auth\\s+credentials)',
-    flags: 'gi',
-    severity: 'High',
-    enabled: true,
-    explanation: 'Detected bundled credential pair or authentication prompt phrasing.',
-    falsePositiveNote: 'Login page user interface text or technical documentation copy.',
-  },
-  {
     rule_id: 'rule_source_config_markers',
     category: 'Source Code & Config Markers',
-    // Database connection strings, .env assignments, private config blocks - removed inline (?m)
-    regex: '(?:mongodb(?:\\+srv)?|postgres(?:ql)?|mysql|redis):\\/\\/[^\\s"\'`]+|^[A-Z0-9_]{3,}\\s*=\\s*["\']?[^\\s"\']{8,}["\']?',
-    flags: 'gim',
+    // Only UPPER_CASE environment variable assignments of 8+ characters, without "i" flag
+    regex: '(?:^|\\b)[A-Z][A-Z0-9_]{2,}\\s*=\\s*["\']?([^"\'\\s\\r\\n]{8,})["\']?',
+    flags: 'gm',
     severity: 'High',
     enabled: true,
-    explanation: 'Detected database connection URI with embedded credentials or environment configuration variable.',
-    falsePositiveNote: 'Localhost connection strings without passwords (e.g. localhost:5432).',
+    explanation: 'Detected uppercase environment configuration secret assignment.',
+    falsePositiveNote: 'Non-sensitive uppercase configuration variables like NODE_ENV or LOG_LEVEL.',
   },
   {
     rule_id: 'rule_confidentiality_labels',
     category: 'Confidentiality Labels',
-    // Explicit classification headers - removed inline (?i)
-    regex: '\\b(?:CONFIDENTIAL|STRICTLY CONFIDENTIAL|INTERNAL ONLY|INTERNAL USE ONLY|PROPRIETARY & CONFIDENTIAL|RESTRICTED DISCLOSURE)\\b',
+    // Explicit classification headers
+    regex: '\\b(?:CONFIDENTIAL(?:\\s*:\\s*\\w+)?|STRICTLY CONFIDENTIAL|INTERNAL ONLY|INTERNAL USE ONLY|PROPRIETARY & CONFIDENTIAL|RESTRICTED DISCLOSURE)\\b',
     flags: 'gi',
     severity: 'High',
     enabled: true,
@@ -126,25 +224,14 @@ export const DEFAULT_SCANNER_RULES: ScannerRuleConfig[] = [
     falsePositiveNote: 'Standard non-disclosure boilerplate in open-source license files.',
   },
   {
-    rule_id: 'rule_natural_language_credentials',
-    category: 'Password/API Key',
-    // Detects conversational credentials: "my api key is X", "api key: X", "the password is X", "my token is X", "secret key is X", "pass is X", "pwd is X"
-    regex: '\\b(?:my\\s+api\\s+key\\s+is|api\\s+key\\s*[:=]|api\\s+key\\s+is|the\\s+password\\s+is|my\\s+token\\s+is|secret\\s+key\\s+is|pass\\s+is|pwd\\s+is)\\s*["\']?([^"\'\\s\\r\\n]{6,})["\']?',
-    flags: 'gi',
-    severity: 'High',
-    enabled: true,
-    explanation: 'Detected natural-language credential disclosure phrase with key or password value.',
-    falsePositiveNote: 'Placeholder values like "changeme", "your_api_key", or documentation examples.',
-  },
-  {
     rule_id: 'rule_high_entropy_secret',
     category: 'possible secret',
-    // Standalone string of 16+ chars evaluated with Shannon entropy filter near credential keywords
-    regex: '\\b[a-zA-Z0-9_-]{16,}\\b',
+    // Standalone string of 24+ chars evaluated with Shannon entropy filter > 3.5 anywhere
+    regex: '\\b[a-zA-Z0-9_\\-]{24,}\\b',
     flags: 'g',
     severity: 'Medium',
     enabled: true,
-    explanation: 'Standalone high-entropy string detected within 40 characters of credential keywords (Shannon entropy > 3.5).',
+    explanation: 'Standalone high-entropy string detected (Shannon entropy > 3.5).',
     falsePositiveNote: 'High-entropy strings may be non-sensitive hashes, UUIDs, or random identifiers.',
   },
 ];

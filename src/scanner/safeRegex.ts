@@ -8,6 +8,14 @@
  */
 export function isSafeRegex(pattern: string, flags?: string): { safe: boolean; error?: string } {
   try {
+    // 0. Reject inline flags like (?i) or (?m) which JavaScript RegExp does not support
+    if (pattern.includes('(?i)') || pattern.includes('(?m)')) {
+      return {
+        safe: false,
+        error: 'JavaScript regular expressions do not support inline flags (?i) or (?m). Please use the Regex Flags field (e.g. "gi", "gim") instead.',
+      };
+    }
+
     // 1. Try compiling
     new RegExp(pattern, flags);
 

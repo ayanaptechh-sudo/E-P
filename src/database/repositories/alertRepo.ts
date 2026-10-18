@@ -98,6 +98,14 @@ export const alertRepo = {
     }
   },
 
+  async updateDetails(alertId: string, title: string, description: string): Promise<void> {
+    await execute('UPDATE alerts SET title = ?, description = ? WHERE alert_id = ?', [
+      title,
+      description,
+      alertId,
+    ]);
+  },
+
   countOpen(): number {
     const res = query<{ count: number }>("SELECT count(*) as count FROM alerts WHERE status IN ('Open', 'Acknowledged', 'Investigating')");
     return res[0]?.count || 0;

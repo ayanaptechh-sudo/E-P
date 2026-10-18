@@ -6,6 +6,7 @@
 import React from 'react';
 import { ScanResult } from '../../scanner/scannerEngine';
 import { RiskBadge } from './CommonUI';
+import { SeverityLevel } from '../../database/types';
 
 export const WarningPanel: React.FC<{
   scanResult: ScanResult;
@@ -55,7 +56,7 @@ export const WarningPanel: React.FC<{
               No configured patterns matched. This does not mean the text is safe.
             </h4>
             <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
-              {scanResult.disclaimer}
+              Pattern detection is not a complete DLP solution.
             </p>
           </div>
         </div>
@@ -78,9 +79,13 @@ export const WarningPanel: React.FC<{
                 Sensitive Data Patterns Detected ({scanResult.totalMatches})
               </h3>
               <RiskBadge level={scanResult.highestSeverity} size="sm" />
-              {isPartial && (
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              {isPartial ? (
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
                   {failureText}
+                </span>
+              ) : (
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  Completed
                 </span>
               )}
             </div>
@@ -118,37 +123,115 @@ export const WarningPanel: React.FC<{
         </div>
       )}
 
-      {/* Findings Summary Table - NEVER prints secret contents! */}
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-left text-xs">
-          <thead>
-            <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500 font-medium">
-              <th className="pb-2">Category</th>
-              <th className="pb-2">Severity</th>
-              <th className="pb-2">Rule ID</th>
-              <th className="pb-2">Offset Location</th>
-              <th className="pb-2">Contextual Explanation & False-Positive Note</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-            {scanResult.matches.map((m, idx) => (
-              <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                <td className="py-2.5 font-semibold text-slate-900 dark:text-white">{m.category}</td>
-                <td className="py-2.5"><RiskBadge level={m.severity} /></td>
-                <td className="py-2.5 font-mono text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">{m.rule_id}</td>
-                <td className="py-2.5 font-mono text-[11px] text-slate-500">chars {m.start}–{m.end}</td>
-                <td className="py-2.5">
-                  <div className="font-medium text-slate-800 dark:text-slate-200">{m.explanation}</div>
-                  {m.falsePositiveNote && (
-                    <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
-                      <span className="font-semibold">False-positive note:</span> {m.falsePositiveNote}
-                    </div>
+      {/* Category-Grouped Findings Summary - NEVER prints secret contents! */}
+      <div className="mt-4 space-y-3">
+        {(() => {
+          const categoryMap = new Map<
+            string,
+            {
+              category: string;
+              matches: typeof scanResult.matches;
+              count: number;
+              highestSeverity: SeverityLevel;
+              primaryRuleId: string;
+              alsoMatchedRuleIds: string[];
+              explanation: string;
+              falsePositiveNote: string;
+            }
+          >();
+
+          const severityRank: Record<SeverityLevel, number> = {
+            Low: 1,
+            Medium: 2,
+            High: 3,
+            Critical: 4,
+          };
+
+          for (const m of scanResult.matches) {
+            const existing = categoryMap.get(m.category);
+            if (!existing) {
+              categoryMap.set(m.category, {
+                category: m.category,
+                matches: [m],
+                count: 1,
+                highestSeverity: m.severity,
+                primaryRuleId: m.rule_id,
+                alsoMatchedRuleIds: [...(m.alsoMatchedRuleIds || [])],
+                explanation: m.explanation,
+                falsePositiveNote: m.falsePositiveNote || '',
+              });
+            } else {
+              existing.matches.push(m);
+              existing.count += 1;
+              if (severityRank[m.severity] > severityRank[existing.highestSeverity]) {
+                existing.highestSeverity = m.severity;
+                existing.primaryRuleId = m.rule_id;
+                existing.explanation = m.explanation;
+                if (m.falsePositiveNote) existing.falsePositiveNote = m.falsePositiveNote;
+              }
+              if (m.alsoMatchedRuleIds) {
+                for (const rid of m.alsoMatchedRuleIds) {
+                  if (!existing.alsoMatchedRuleIds.includes(rid)) {
+                    existing.alsoMatchedRuleIds.push(rid);
+                  }
+                }
+              }
+            }
+          }
+
+          const groups = Array.from(categoryMap.values()).sort(
+            (a, b) => (severityRank[b.highestSeverity] || 0) - (severityRank[a.highestSeverity] || 0)
+          );
+
+          return groups.map((group) => (
+            <div
+              key={group.category}
+              className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200/60 dark:border-slate-700/60">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                    {group.category}: {group.count}
+                  </h4>
+                  <RiskBadge level={group.highestSeverity} size="sm" />
+                </div>
+                <div className="flex items-center gap-2 text-[11px]">
+                  <span className="text-slate-400">Rule:</span>
+                  <span className="font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                    {group.primaryRuleId}
+                  </span>
+                  {group.alsoMatchedRuleIds.length > 0 && (
+                    <span className="text-slate-400">
+                      (also matched: {group.alsoMatchedRuleIds.join(', ')})
+                    </span>
                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+
+              <div className="mt-2 text-xs text-slate-700 dark:text-slate-300">
+                {group.explanation}
+              </div>
+
+              {group.falsePositiveNote && (
+                <div className="mt-2 text-[11px] text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/40 p-2 rounded border border-amber-200/80 dark:border-amber-800/50">
+                  <span className="font-semibold">False-positive note:</span> {group.falsePositiveNote}
+                </div>
+              )}
+
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400 font-mono">
+                <span>Detected {group.matches.length > 1 ? 'offsets' : 'offset'}:</span>
+                {group.matches.map((m, i) => (
+                  <span
+                    key={i}
+                    className="px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300"
+                  >
+                    chars {m.start}–{m.end}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ));
+        })()}
       </div>
 
       <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 dark:text-slate-500">

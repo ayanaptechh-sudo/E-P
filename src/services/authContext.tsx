@@ -8,6 +8,7 @@ import { AppUser, UserRole } from '../database/types';
 import { authService, PageId, ROLE_PERMISSIONS } from './authService';
 import { initDatabase } from '../database/db';
 import { settingsRepo } from '../database/repositories/reportRepo';
+import { policyRepo } from '../database/repositories/policyRepo';
 
 interface AuthContextType {
   currentUser: AppUser | null;
@@ -39,6 +40,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { isFirstRun: firstRun } = await initDatabase();
       setIsFirstRun(firstRun);
+      try {
+        await policyRepo.migrateScannerRules();
+      } catch (syncErr) {
+        console.warn('Failed to migrate scanner rules:', syncErr);
+      }
       try {
         const timeoutStr = settingsRepo.get('session_timeout_minutes', '30');
         setSessionTimeoutMinutes(parseInt(timeoutStr, 10) || 30);

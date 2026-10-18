@@ -64,8 +64,8 @@ export const scanRepo = {
           `INSERT INTO findings (
             finding_id, scan_id, usage_event_id, user_id, tool_id,
             category, match_count, rule_id, severity, explanation,
-            created_at, status, action_taken, policy_version
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            false_positive_note, created_at, status, action_taken, policy_version
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             finding_id,
             f.scan_id,
@@ -77,6 +77,7 @@ export const scanRepo = {
             f.rule_id,
             f.severity,
             f.explanation,
+            f.false_positive_note || '',
             f.created_at,
             f.status,
             f.action_taken,

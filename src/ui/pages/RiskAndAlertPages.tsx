@@ -67,12 +67,19 @@ export const FindingsPage: React.FC<{ onNavigateToIncidents?: () => void }> = ({
 
   const columns: Column<Finding & { tool_name?: string; username?: string }>[] = [
     {
+      header: 'Rule ID',
+      accessor: (f) => (
+        <span className="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+          {f.rule_id}
+        </span>
+      ),
+      sortable: true,
+      sortValue: (f) => f.rule_id,
+    },
+    {
       header: 'Category',
       accessor: (f) => (
-        <div>
-          <span className="font-semibold text-slate-900 dark:text-white">{f.category}</span>
-          <div className="font-mono text-[11px] text-slate-400 mt-0.5">{f.rule_id}</div>
-        </div>
+        <span className="font-semibold text-slate-900 dark:text-white">{f.category}</span>
       ),
       sortable: true,
       sortValue: (f) => f.category,
@@ -82,6 +89,19 @@ export const FindingsPage: React.FC<{ onNavigateToIncidents?: () => void }> = ({
       accessor: (f) => <RiskBadge level={f.severity} size="sm" />,
       sortable: true,
       sortValue: (f) => f.severity,
+    },
+    {
+      header: 'Explanation & False-Positive Note',
+      accessor: (f) => (
+        <div className="max-w-md">
+          <div className="text-xs text-slate-800 dark:text-slate-200 font-medium">{f.explanation}</div>
+          {f.false_positive_note ? (
+            <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
+              <span className="font-semibold">False-positive note:</span> {f.false_positive_note}
+            </div>
+          ) : null}
+        </div>
+      ),
     },
     {
       header: 'Matches',

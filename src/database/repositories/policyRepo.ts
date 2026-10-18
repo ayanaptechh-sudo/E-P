@@ -5,7 +5,8 @@
 
 import { execute, query, transaction } from '../db';
 import { Policy, PolicyType } from '../types';
-import { BALANCED_TEMPLATE } from '../../core/defaultPolicies';
+import { BALANCED_TEMPLATE, DEFAULT_SCANNER_RULES, RULES_VERSION, ScannerRuleConfig } from '../../core/defaultPolicies';
+import { auditRepo } from './userRepo';
 
 export const policyRepo = {
   getLatest(policyId: string): Policy | null {
@@ -154,4 +155,108 @@ export const policyRepo = {
       );
     });
   },
+
+  async migrateScannerRules(): Promise<boolean> {
+    try {
+      const policy = this.getLatest('pol_data_categories');
+      if (!policy) return false;
+
+      let storedRules: ScannerRuleConfig[] = [];
+      let storedVersion = 1;
+
+      try {
+        const parsed = JSON.parse(policy.policy_json);
+        if (Array.isArray(parsed)) {
+          storedRules = parsed;
+          storedVersion = 1;
+        } else if (parsed && typeof parsed === 'object') {
+          storedRules = Array.isArray(parsed.rules) ? parsed.rules : [];
+          storedVersion = typeof parsed.rules_version === 'number' ? parsed.rules_version : 1;
+        }
+      } catch {
+        storedRules = [];
+      }
+
+      let changed = false;
+      const finalRules: ScannerRuleConfig[] = [];
+      const seenIds = new Set<string>();
+
+      for (const rule of storedRules) {
+        if (!rule || !rule.rule_id) continue;
+        seenIds.add(rule.rule_id);
+
+        let compiles = true;
+        try {
+          new RegExp(rule.regex, rule.flags || 'g');
+        } catch {
+          compiles = false;
+        }
+
+        if (!compiles) {
+          const defaultRule = DEFAULT_SCANNER_RULES.find((d) => d.rule_id === rule.rule_id);
+          if (defaultRule) {
+            finalRules.push({ ...defaultRule });
+            changed = true;
+          } else {
+            finalRules.push({ ...rule, enabled: false });
+            changed = true;
+          }
+        } else {
+          // Never overwrite a rule the admin edited and that still compiles
+          finalRules.push(rule);
+        }
+      }
+
+      // For every default rule_id missing from stored rules, append it
+      for (const defaultRule of DEFAULT_SCANNER_RULES) {
+        if (!seenIds.has(defaultRule.rule_id)) {
+          finalRules.push({ ...defaultRule });
+          seenIds.add(defaultRule.rule_id);
+          changed = true;
+        }
+      }
+
+      if (storedVersion < RULES_VERSION) {
+        changed = true;
+      }
+
+      if (changed) {
+        await this.saveNewVersion({
+          policy_id: 'pol_data_categories',
+          policy_name: policy.policy_name,
+          policy_type: 'Data Category',
+          policy_json: JSON.stringify({
+            rules_version: RULES_VERSION,
+            rules: finalRules,
+          }),
+          enabled: true,
+          updated_by: 'system-migration',
+        });
+
+        try {
+          await auditRepo.log({
+            user_id: 'system',
+            action: 'POLICY_MIGRATION',
+            target_type: 'policy',
+            target_id: 'pol_data_categories',
+            outcome: 'Success',
+            details: `Migrated scanner rules to v${RULES_VERSION} (${finalRules.length} rules).`,
+          });
+        } catch (auditErr) {
+          console.warn('Migration audit log error:', auditErr);
+        }
+
+        return true;
+      }
+    } catch (err) {
+      console.warn('migrateScannerRules error (continuing without blocking):', err);
+    }
+    return false;
+  },
+
+  async syncDefaultRules(): Promise<boolean> {
+    return this.migrateScannerRules();
+  },
 };
+
+export const migrateScannerRules = () => policyRepo.migrateScannerRules();

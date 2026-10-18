@@ -10,13 +10,13 @@ import { policyRepo } from '../../database/repositories/policyRepo';
 import { scanRepo } from '../../database/repositories/scanRepo';
 import { settingsRepo } from '../../database/repositories/reportRepo';
 import { alertService } from '../../core/alertService';
-import { scanTextAsync, ScanResult } from '../../scanner/scannerEngine';
+import { scanTextAsync, ScanResult, getActiveScannerRules } from '../../scanner/scannerEngine';
 import { redactText, RedactionResult } from '../../redaction/redactionEngine';
 import { PrivacyBanner } from '../components/CommonUI';
 import { WarningPanel } from '../components/WarningPanel';
 import { RedactionCard } from '../components/RedactionCard';
 import { readClipboardSafe } from '../../clipboard/clipboardScanner';
-import { DEFAULT_SCANNER_RULES, ScannerRuleConfig } from '../../core/defaultPolicies';
+import { ScannerRuleConfig } from '../../core/defaultPolicies';
 
 export const ScanTextPage: React.FC<{
   initialText?: string;
@@ -59,6 +59,23 @@ export const ScanTextPage: React.FC<{
     if (onClearExternal) onClearExternal();
   };
 
+  const catPolicy = useMemo(() => policyRepo.getLatest('pol_data_categories'), [activeScanId]);
+  const activeRulesSummary = useMemo(() => {
+    return getActiveScannerRules(
+      catPolicy?.enabled ? catPolicy.policy_json : null,
+      catPolicy?.version || 1
+    );
+  }, [catPolicy]);
+
+  const extraKeywords = useMemo(() => {
+    try {
+      const stored = settingsRepo.get('extra_credential_keywords', '');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
   const handleScan = async () => {
     if (!text.trim() || !currentUser) return;
     setIsScanning(true);
@@ -66,23 +83,12 @@ export const ScanTextPage: React.FC<{
     setRedactionResult(null);
 
     try {
-      // 1. Fetch active data categories policy rules
-      let rules: ScannerRuleConfig[] = DEFAULT_SCANNER_RULES;
-      let policyVersion = 1;
-      const catPolicy = policyRepo.getLatest('pol_data_categories');
-      if (catPolicy && catPolicy.enabled) {
-        try {
-          rules = JSON.parse(catPolicy.policy_json);
-          policyVersion = catPolicy.version;
-        } catch (e) {
-          console.warn('Failed to parse policy rules:', e);
-        }
-      }
-
+      // 1. Fetch active data categories policy rules safely merged with defaults
+      const rules: ScannerRuleConfig[] = activeRulesSummary.rules;
       const customIdRegex = settingsRepo.get('custom_id_regex', '');
 
-      // 2. Run local chunked scanner
-      const result = await scanTextAsync(text, rules, customIdRegex);
+      // 2. Run local scanner with primary context detector + fallback rules
+      const result = await scanTextAsync(text, rules, customIdRegex, extraKeywords);
       setScanResult(result);
 
       // 3. Record scan session metadata (strictly metadata only!)
@@ -100,28 +106,42 @@ export const ScanTextPage: React.FC<{
 
       // 4. Record findings and evaluate alerts if matches found
       if (result.matches.length > 0) {
-        const findingsToCreate = result.matches.map((m) => ({
-          scan_id: session.scan_id,
-          usage_event_id: null,
-          user_id: currentUser.user_id,
-          tool_id: targetToolId || null,
-          category: m.category,
-          match_count: 1,
-          rule_id: m.rule_id,
-          severity: m.severity,
-          explanation: m.explanation,
-          created_at: new Date().toISOString(),
-          status: 'New' as const,
-          action_taken: 'Warned' as const,
-          policy_version: policyVersion,
-        }));
+        // Group matches by category: one finding per (scan, category)
+        const categoryGroups = new Map<string, typeof result.matches>();
+        for (const m of result.matches) {
+          const list = categoryGroups.get(m.category) || [];
+          list.push(m);
+          categoryGroups.set(m.category, list);
+        }
+
+        const severityRank: Record<string, number> = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+
+        const findingsToCreate = Array.from(categoryGroups.entries()).map(([cat, mList]) => {
+          mList.sort((a, b) => (severityRank[b.severity] || 0) - (severityRank[a.severity] || 0));
+          const primary = mList[0];
+
+          return {
+            scan_id: session.scan_id,
+            usage_event_id: null,
+            user_id: currentUser.user_id,
+            tool_id: targetToolId || null,
+            category: cat,
+            match_count: mList.length,
+            rule_id: primary.rule_id,
+            severity: primary.severity,
+            explanation: primary.explanation,
+            false_positive_note: primary.falsePositiveNote || '',
+            created_at: new Date().toISOString(),
+            status: 'New' as const,
+            action_taken: 'Warned' as const,
+            policy_version: activeRulesSummary.policyVersion,
+          };
+        });
 
         const recordedFindings = await scanRepo.recordFindings(findingsToCreate);
 
-        // Trigger alert evaluation for each finding
-        for (const finding of recordedFindings) {
-          await alertService.evaluateFindingForAlert(finding, targetToolId || null);
-        }
+        // Call alert service ONCE per scan session
+        await alertService.evaluateScanForAlert(session, recordedFindings, targetToolId || null);
 
         // Prepare redaction result
         const redRes = redactText(text, result.matches);
@@ -204,35 +224,40 @@ export const ScanTextPage: React.FC<{
                 Luhn checksum filter for cards · Pakistani CNIC & National IDs · Known API keys & PEM · Password assignments
               </span>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleClear}
-                  disabled={!text && !scanResult}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-40"
-                >
-                  Clear
-                </button>
-                <button
-                  type="button"
-                  onClick={handleScan}
-                  disabled={!text.trim() || isScanning}
-                  className="px-5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isScanning ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Scanning Patterns...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      </svg>
-                      <span>Scan Text Locally</span>
-                    </>
-                  )}
-                </button>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    disabled={!text && !scanResult}
+                    className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-40"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleScan}
+                    disabled={!text.trim() || isScanning}
+                    className="px-5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isScanning ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Scanning Patterns...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        <span>Scan Text Locally</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
+                  Active rules: {activeRulesSummary.totalCount} (policy v{activeRulesSummary.policyVersion}, rules v{activeRulesSummary.rulesVersion})
+                </span>
               </div>
             </div>
           </div>
@@ -256,6 +281,14 @@ export const ScanClipboardPage: React.FC = () => {
   const [clipboardText, setClipboardText] = useState('');
   const [isReading, setIsReading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const catPolicy = useMemo(() => policyRepo.getLatest('pol_data_categories'), []);
+  const activeRulesSummary = useMemo(() => {
+    return getActiveScannerRules(
+      catPolicy?.enabled ? catPolicy.policy_json : null,
+      catPolicy?.version || 1
+    );
+  }, [catPolicy]);
 
   // Clear clipboard derived state on unmount
   useEffect(() => {
@@ -318,22 +351,27 @@ export const ScanClipboardPage: React.FC = () => {
             </div>
           )}
 
-          <button
-            onClick={handleReadAndScan}
-            disabled={isReading}
-            className="px-6 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-          >
-            {isReading ? (
-              <span>Reading Clipboard...</span>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                </svg>
-                <span>Read & Scan Clipboard Now</span>
-              </>
-            )}
-          </button>
+          <div className="flex flex-col items-center gap-2">
+            <button
+              onClick={handleReadAndScan}
+              disabled={isReading}
+              className="px-6 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+            >
+              {isReading ? (
+                <span>Reading Clipboard...</span>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                  </svg>
+                  <span>Read & Scan Clipboard Now</span>
+                </>
+              )}
+            </button>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
+              Active rules: {activeRulesSummary.totalCount} (policy v{activeRulesSummary.policyVersion}, rules v{activeRulesSummary.rulesVersion})
+            </span>
+          </div>
         </div>
       ) : (
         <ScanTextPage
