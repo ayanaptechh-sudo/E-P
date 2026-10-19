@@ -5,6 +5,8 @@
 
 // @ts-ignore
 import initSqlJsInline from 'sql.js/dist/sql-wasm-inline.js';
+// @ts-ignore
+import initSqlJsAsm from 'sql.js/dist/sql-asm.js';
 import initSqlJsStandard, { Database, SqlJsStatic } from 'sql.js';
 
 const DB_STORE_NAME = 'promptshield_db_store';
@@ -99,9 +101,9 @@ async function saveToIndexedDB(data: Uint8Array): Promise<void> {
 
 /**
  * Initialize SQLite database with foreign keys, schema, and indexes.
- * Primary: Bundled inline WASM (zero network fetch, immune to extension fetch interceptors).
- * Secondary: Local static /sql-wasm.wasm.
- * Tertiary: CDN 1.10.3 fallback.
+ * Primary: Bundled inline WASM (zero network fetch, embedded base64 wasm).
+ * Secondary: Pure JavaScript ASM.js (100% offline, requires no WebAssembly streaming).
+ * Tertiary: Local static /sql-wasm.wasm using pre-buffered ArrayBuffer.
  */
 export async function initDatabase(): Promise<{ isFirstRun: boolean }> {
   if (isInitialized && dbInstance) {
@@ -113,52 +115,57 @@ export async function initDatabase(): Promise<{ isFirstRun: boolean }> {
     }
   }
 
-  // 1. Load SQL.js WASM or Asm engine
-  // Priority A: Local /sql-wasm.wasm
+  // 1. Primary: Bundled inline WASM (zero network fetch, embedded base64)
   try {
-    SQL = await initSqlJsStandard({
-      locateFile: (file: string) => `/sql-wasm.wasm`,
-    });
-  } catch (localErr) {
-    console.warn('Local /sql-wasm.wasm failed, trying cdnjs 1.10.3:', localErr);
-  }
-
-  // Priority B: CDN as explicitly requested
-  if (!SQL) {
-    try {
-      SQL = await initSqlJsStandard({
-        locateFile: (file: string) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`,
-      });
-    } catch (cdnErr) {
-      console.warn('CDN 1.10.3 failed, trying inline WASM:', cdnErr);
+    const inlineFn = typeof initSqlJsInline === 'function' ? initSqlJsInline : (initSqlJsInline as any)?.default;
+    if (typeof inlineFn === 'function') {
+      SQL = await inlineFn();
+      console.log('[PromptShield] Initialized local SQLite via inline WASM engine.');
     }
+  } catch (inlineErr) {
+    console.warn('[PromptShield] Inline WASM failed, attempting ASM.js:', inlineErr);
   }
 
-  // Priority C: Bundled inline WASM (zero network fetch)
+  // 2. Secondary: Pure JavaScript ASM.js (100% offline, requires NO WebAssembly support)
   if (!SQL) {
     try {
-      const inlineFn = typeof initSqlJsInline === 'function' ? initSqlJsInline : (initSqlJsInline as any)?.default;
-      if (typeof inlineFn === 'function') {
-        SQL = await inlineFn();
+      const asmFn = typeof initSqlJsAsm === 'function' ? initSqlJsAsm : (initSqlJsAsm as any)?.default;
+      if (typeof asmFn === 'function') {
+        SQL = await asmFn();
+        console.log('[PromptShield] Initialized local SQLite via ASM.js engine.');
       }
-    } catch (inlineErr) {
-      console.warn('Inline wasm failed, trying unpkg CDN:', inlineErr);
+    } catch (asmErr) {
+      console.warn('[PromptShield] ASM.js engine fallback failed:', asmErr);
     }
   }
 
-  // Priority D: unpkg CDN
+  // 3. Tertiary: Local static /sql-wasm.wasm using ArrayBuffer fetch
+  if (!SQL) {
+    try {
+      const wasmResp = await fetch('/sql-wasm.wasm');
+      if (wasmResp.ok) {
+        const wasmBinary = await wasmResp.arrayBuffer();
+        SQL = await initSqlJsStandard({ wasmBinary });
+        console.log('[PromptShield] Initialized local SQLite via ArrayBuffer wasmBinary.');
+      }
+    } catch (binErr) {
+      console.warn('[PromptShield] ArrayBuffer wasm load failed:', binErr);
+    }
+  }
+
+  // 4. Quaternary: Standard locateFile
   if (!SQL) {
     try {
       SQL = await initSqlJsStandard({
-        locateFile: (file: string) => `https://unpkg.com/sql.js@1.10.3/dist/${file}`,
+        locateFile: () => `/sql-wasm.wasm`,
       });
-    } catch (unpkgErr) {
-      console.warn('Unpkg CDN failed:', unpkgErr);
+    } catch (stdErr) {
+      console.warn('[PromptShield] Standard locateFile failed:', stdErr);
     }
   }
 
   if (!SQL) {
-    throw new Error('Failed to load sql.js WebAssembly engine from local, CDN, and inline sources.');
+    throw new Error('Failed to load sql.js engine from inline WASM, ASM.js, and local sources.');
   }
 
   // 2. Load from IndexedDB with corrupt-snapshot fallback

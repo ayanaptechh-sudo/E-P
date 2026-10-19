@@ -18,6 +18,7 @@ import {
   EDUCATION_TEMPLATE,
   ScannerRuleConfig,
   PolicyTemplate,
+  DEFAULT_SCANNER_RULES,
   DEFAULT_CREDENTIAL_KEYWORDS,
   DEFAULT_HINGLISH_WORDS,
   DEFAULT_PLACEHOLDERS,
@@ -44,13 +45,22 @@ export const PolicyPage: React.FC = () => {
   // Active Tab: templates | categories | thresholds | retention | history | keywords
   const [activeTab, setActiveTab] = useState<'templates' | 'categories' | 'thresholds' | 'retention' | 'history' | 'keywords'>('categories');
 
-  // Scanner Rules editing state
+  // Scanner Rules editing state - safely parse array, object with rules, or fallback to default rules
   const rulesList: ScannerRuleConfig[] = useMemo(() => {
-    if (!dataPolicy) return [];
+    if (!dataPolicy || !dataPolicy.policy_json) return DEFAULT_SCANNER_RULES;
     try {
-      return JSON.parse(dataPolicy.policy_json);
+      const parsed = JSON.parse(dataPolicy.policy_json);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+      if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.rules)) return parsed.rules;
+        if (Array.isArray(parsed.dataCategories)) return parsed.dataCategories;
+        if (Array.isArray(parsed.categories)) return parsed.categories;
+      }
+      return DEFAULT_SCANNER_RULES;
     } catch {
-      return [];
+      return DEFAULT_SCANNER_RULES;
     }
   }, [dataPolicy]);
 
@@ -493,55 +503,63 @@ export const PolicyPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {rulesList.map((r, idx) => (
-                  <tr key={r.rule_id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                    <td className="py-3 px-4 font-mono font-semibold text-slate-900 dark:text-white">
-                      {r.rule_id}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-slate-800 dark:text-slate-200">
-                      {r.category}
-                    </td>
-                    <td className="py-3 px-4">
-                      <RiskBadge level={r.severity} size="sm" />
-                    </td>
-                    <td className="py-3 px-4">
-                      <button
-                        onClick={() => handleToggleRule(idx)}
-                        className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
-                          r.enabled
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                            : 'bg-slate-100 text-slate-500 dark:bg-slate-800'
-                        }`}
-                      >
-                        {r.enabled ? 'Enabled' : 'Disabled'}
-                      </button>
-                    </td>
-                    <td className="py-3 px-4 font-mono text-[11px] max-w-xs">
-                      <div className="flex items-center gap-1.5 truncate">
-                        <span className="text-slate-700 dark:text-slate-300 truncate">{r.regex}</span>
-                        <span className="shrink-0 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-indigo-600 dark:text-indigo-400 font-mono font-medium">
-                          /{r.flags || 'g'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                {Array.isArray(rulesList) && rulesList.length > 0 ? (
+                  rulesList.map((r, idx) => (
+                    <tr key={r.rule_id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                      <td className="py-3 px-4 font-mono font-semibold text-slate-900 dark:text-white">
+                        {r.rule_id}
+                      </td>
+                      <td className="py-3 px-4 font-medium text-slate-800 dark:text-slate-200">
+                        {r.category}
+                      </td>
+                      <td className="py-3 px-4">
+                        <RiskBadge level={r.severity} size="sm" />
+                      </td>
+                      <td className="py-3 px-4">
                         <button
-                          onClick={() => openEditRuleModal(r, idx)}
-                          className="text-xs text-indigo-600 hover:underline font-medium"
+                          onClick={() => handleToggleRule(idx)}
+                          className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                            r.enabled
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'bg-slate-100 text-slate-500 dark:bg-slate-800'
+                          }`}
                         >
-                          Edit
+                          {r.enabled ? 'Enabled' : 'Disabled'}
                         </button>
-                        <button
-                          onClick={() => handleDeleteRule(idx)}
-                          className="text-xs text-rose-600 hover:underline font-medium ml-2"
-                        >
-                          Delete
-                        </button>
-                      </div>
+                      </td>
+                      <td className="py-3 px-4 font-mono text-[11px] max-w-xs">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span className="text-slate-700 dark:text-slate-300 truncate">{r.regex}</span>
+                          <span className="shrink-0 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-indigo-600 dark:text-indigo-400 font-mono font-medium">
+                            /{r.flags || 'g'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openEditRuleModal(r, idx)}
+                            className="text-xs text-indigo-600 hover:underline font-medium"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRule(idx)}
+                            className="text-xs text-rose-600 hover:underline font-medium ml-2"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                      No custom scanner rules configured.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

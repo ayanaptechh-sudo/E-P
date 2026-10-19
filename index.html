@@ -5,22 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
       (function() {
-        // Ensure window.fetch has both a getter and setter across window and prototypes
+        var nativeFetch = typeof window !== 'undefined' && typeof window.fetch === 'function' ? window.fetch.bind(window) : null;
         function patchFetch(target) {
           try {
             if (!target) return;
             var desc = Object.getOwnPropertyDescriptor(target, 'fetch');
-            if (desc) {
-              if (desc.configurable || typeof desc.set === 'undefined') {
-                var getter = desc.get;
-                var currentVal = getter ? getter.call(window) : desc.value;
-                Object.defineProperty(target, 'fetch', {
-                  get: function() { return currentVal; },
-                  set: function(fn) { currentVal = fn; },
-                  configurable: true,
-                  enumerable: true
-                });
-              }
+            if (desc && (desc.configurable || typeof desc.set === 'undefined')) {
+              var currentFn = nativeFetch;
+              Object.defineProperty(target, 'fetch', {
+                get: function() { return currentFn; },
+                set: function(fn) { currentFn = fn; },
+                configurable: true,
+                enumerable: true
+              });
             }
           } catch (_) {}
         }
