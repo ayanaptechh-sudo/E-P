@@ -8,6 +8,7 @@ import autoTable from 'jspdf-autotable';
 import { computeSha256, generateUUID } from '../security/crypto';
 import { reportRepo } from '../database/repositories/reportRepo';
 import { auditRepo } from '../database/repositories/userRepo';
+import { incidentRepo } from '../database/repositories/alertRepo';
 import { ReportRecord, ReportType, Incident, IncidentTimeline } from '../database/types';
 
 export interface UsageReportData {
@@ -37,6 +38,30 @@ export interface IncidentReportData {
   assignedToName: string;
   telemetryLimitations: string[];
   recommendations: string[];
+}
+
+export function generateIncidentReportData(incidentId: string): IncidentReportData | null {
+  const incident = incidentRepo.getById(incidentId);
+  if (!incident) return null;
+  const timeline = incidentRepo.getTimeline(incidentId);
+  return {
+    reportId: `INC-${incident.incident_number}-${Date.now().toString().slice(-4)}`,
+    generatedAt: new Date().toISOString(),
+    generatedBy: incident.username || 'Security Lead',
+    incident,
+    timeline,
+    username: incident.username || incident.user_id,
+    assignedToName: incident.assigned_name || 'Unassigned',
+    telemetryLimitations: [
+      'Evidence strictly distinguishes local prompt scans from confirmed egress transmissions.',
+      'Browser extensions reflect declared capabilities, not proof of content transmission.',
+    ],
+    recommendations: [
+      'Remediate exposed credentials or rotate associated API tokens immediately.',
+      'Review employee awareness training on approved AI tooling catalog.',
+      'Maintain chronological timeline records for compliance and audit defense.',
+    ],
+  };
 }
 
 /**

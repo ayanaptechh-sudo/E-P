@@ -194,8 +194,8 @@ export const InventoryPage: React.FC = () => {
       header: 'AI Service Name',
       accessor: (tool) => (
         <div>
-          <div className="font-semibold text-slate-900 dark:text-white">{tool.tool_name}</div>
-          <div className="font-mono text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+          <div className="font-bold text-gray-900 text-xs">{tool.tool_name}</div>
+          <div className="font-mono text-[11px] text-gray-500 mt-0.5">
             {tool.identifier}
           </div>
         </div>
@@ -206,7 +206,7 @@ export const InventoryPage: React.FC = () => {
     {
       header: 'Type',
       accessor: (tool) => (
-        <span className="font-mono text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+        <span className="font-mono text-xs text-gray-700 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded font-medium">
           {tool.tool_type}
         </span>
       ),
@@ -215,8 +215,9 @@ export const InventoryPage: React.FC = () => {
     },
     {
       header: 'Category',
-      accessor: 'category',
+      accessor: (tool) => <span className="text-gray-800 font-medium text-xs">{tool.category}</span>,
       sortable: true,
+      sortValue: (t) => t.category,
     },
     {
       header: 'Approval Status',
@@ -224,14 +225,14 @@ export const InventoryPage: React.FC = () => {
         <select
           value={tool.approval_status}
           onChange={(e) => handleApprovalChange(tool, e.target.value as ToolApprovalStatus)}
-          className={`text-xs font-semibold py-1 px-2 rounded-md border focus:outline-none transition-colors ${
+          className={`text-xs font-bold py-1 px-2.5 rounded-lg border focus:outline-none transition-colors cursor-pointer shadow-2xs ${
             tool.approval_status === 'Approved'
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
               : tool.approval_status === 'Restricted'
-              ? 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-700'
+              ? 'bg-rose-50 text-rose-800 border-rose-300'
               : tool.approval_status === 'Review Required'
-              ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700'
-              : 'bg-orange-50 text-orange-800 border-orange-300 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-700'
+              ? 'bg-amber-50 text-amber-800 border-amber-300'
+              : 'bg-orange-50 text-orange-800 border-orange-300'
           }`}
         >
           <option value="Approved">Approved</option>
@@ -243,7 +244,7 @@ export const InventoryPage: React.FC = () => {
     },
     {
       header: 'Risk Policy',
-      accessor: 'risk_policy',
+      accessor: (tool) => <span className="text-gray-700 text-xs font-mono">{tool.risk_policy}</span>,
     },
     {
       header: 'Actions',
@@ -252,7 +253,7 @@ export const InventoryPage: React.FC = () => {
         <div className="flex items-center justify-end gap-2">
           <button
             onClick={() => openEditModal(tool)}
-            className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
             title="Edit Tool"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -261,7 +262,7 @@ export const InventoryPage: React.FC = () => {
           </button>
           <button
             onClick={() => handleDeleteTool(tool)}
-            className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"
+            className="p-1.5 text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
             title="Delete Tool"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -276,13 +277,13 @@ export const InventoryPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header with Import Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">
             AI Tool Inventory & Shadow AI Discovery
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Manage approved AI tools and import local workstation telemetry
+          <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">
+            Manage approved enterprise AI tools and import local workstation telemetry
           </p>
         </div>
 
@@ -294,9 +295,9 @@ export const InventoryPage: React.FC = () => {
               setImportResult(null);
               setImportStatusMessage(null);
             }}
-            className="px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+            className="px-3.5 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
             <span>Import History</span>
@@ -309,9 +310,9 @@ export const InventoryPage: React.FC = () => {
               setImportResult(null);
               setImportStatusMessage(null);
             }}
-            className="px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+            className="px-3.5 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
             </svg>
             <span>Import Processes</span>
@@ -324,9 +325,9 @@ export const InventoryPage: React.FC = () => {
               setImportResult(null);
               setImportStatusMessage(null);
             }}
-            className="px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+            className="px-3.5 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
             </svg>
             <span>Import Extensions</span>
@@ -337,7 +338,7 @@ export const InventoryPage: React.FC = () => {
               resetForm();
               setIsAddModalOpen(true);
             }}
-            className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+            className="px-4 py-2 text-xs font-bold text-white bg-[#5B4DFB] hover:bg-[#4E3EF0] rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -359,11 +360,9 @@ export const InventoryPage: React.FC = () => {
           tool.category.toLowerCase().includes(q) ||
           tool.approval_status.toLowerCase().includes(q)
         }
-        emptyTitle="No AI tools cataloged"
-        emptySubtitle="Add custom tools or seed defaults."
       />
 
-      {/* Add / Edit Tool Modal */}
+      {/* Add / Edit Modal */}
       <Modal
         isOpen={isAddModalOpen || isEditModalOpen}
         onClose={() => {
@@ -371,12 +370,12 @@ export const InventoryPage: React.FC = () => {
           setIsEditModalOpen(false);
           setSelectedTool(null);
         }}
-        title={selectedTool ? 'Edit AI Tool' : 'Catalog New AI Tool'}
-        subtitle="Manage approval criteria, domain patterns, and workstation risk classification."
+        title={selectedTool ? `Edit ${selectedTool.tool_name}` : 'Add AI Service to Catalog'}
+        subtitle="Cataloged tools are evaluated by the local prompt scanner and shadow AI discovery daemon."
       >
         <form onSubmit={handleSaveTool} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
               Tool Name
             </label>
             <input
@@ -385,19 +384,19 @@ export const InventoryPage: React.FC = () => {
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               placeholder="e.g. Cursor IDE, ChatGPT, Claude"
-              className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-900 font-medium"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
                 Type
               </label>
               <select
                 value={formType}
                 onChange={(e) => setFormType(e.target.value as ToolType)}
-                className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none text-slate-900 dark:text-white"
+                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none text-gray-900 font-semibold"
               >
                 <option value="Website">Website</option>
                 <option value="Desktop App">Desktop App</option>
@@ -406,13 +405,13 @@ export const InventoryPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
                 Approval Status
               </label>
               <select
                 value={formApproval}
                 onChange={(e) => setFormApproval(e.target.value as ToolApprovalStatus)}
-                className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none text-slate-900 dark:text-white"
+                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none text-gray-900 font-semibold"
               >
                 <option value="Approved">Approved</option>
                 <option value="Unreviewed">Unreviewed</option>
@@ -423,7 +422,7 @@ export const InventoryPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
               Identifier (Domain / Process / Ext ID)
             </label>
             <input
@@ -432,12 +431,12 @@ export const InventoryPage: React.FC = () => {
               value={formIdentifier}
               onChange={(e) => setFormIdentifier(e.target.value)}
               placeholder="e.g. claude.ai, cursor.exe, or extension ID"
-              className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white font-mono"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-900 font-mono"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
               Category
             </label>
             <input
@@ -445,12 +444,12 @@ export const InventoryPage: React.FC = () => {
               value={formCategory}
               onChange={(e) => setFormCategory(e.target.value)}
               placeholder="e.g. Generative Text, Code Assistant, Image Generation"
-              className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none text-slate-900 dark:text-white"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none text-gray-900 font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
               Risk Policy
             </label>
             <input
@@ -458,24 +457,24 @@ export const InventoryPage: React.FC = () => {
               value={formPolicy}
               onChange={(e) => setFormPolicy(e.target.value)}
               placeholder="e.g. Standard DLP Guardrail, Blocked, Allow with Warning"
-              className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none text-slate-900 dark:text-white"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none text-gray-900 font-medium"
             />
           </div>
 
-          <div className="pt-3 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="pt-3 flex justify-end gap-2 border-t border-gray-150">
             <button
               type="button"
               onClick={() => {
                 setIsAddModalOpen(false);
                 setIsEditModalOpen(false);
               }}
-              className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs"
+              className="px-4 py-2 text-xs font-bold text-white bg-[#5B4DFB] hover:bg-[#4E3EF0] rounded-xl shadow-xs transition-colors cursor-pointer"
             >
               {selectedTool ? 'Save Changes' : 'Create Tool'}
             </button>
@@ -505,7 +504,7 @@ export const InventoryPage: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1">
               Raw File Content / Data
             </label>
             <textarea
@@ -519,33 +518,33 @@ export const InventoryPage: React.FC = () => {
                   ? 'Paste tasklist output or JSON array of process names: ["cursor.exe", "chatgpt.exe"]'
                   : 'Paste extension JSON list: [{"name": "GitHub Copilot", "id": "github.copilot", "permissions": ["tabs"]}]'
               }
-              className="w-full p-3 font-mono text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
+              className="w-full p-3 font-mono text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-gray-900"
             />
           </div>
 
           {importStatusMessage && (
             <div
-              className={`p-3 rounded-lg text-xs font-medium border ${
+              className={`p-3 rounded-xl text-xs font-semibold border ${
                 importResult?.status === 'Success'
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                   : importResult?.status === 'Partial'
-                  ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
-                  : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
+                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                  : 'bg-rose-50 text-rose-800 border-rose-200'
               }`}
             >
               {importStatusMessage}
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-            <span className="text-[11px] text-slate-400">
+          <div className="flex items-center justify-between pt-2 border-t border-gray-150">
+            <span className="text-[11px] text-gray-500 font-medium">
               Deduplication active (same tool, source & time window skipped automatically)
             </span>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setActiveImportType(null)}
-                className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                className="px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
               >
                 Close
               </button>
@@ -553,7 +552,7 @@ export const InventoryPage: React.FC = () => {
                 type="button"
                 onClick={handleProcessImport}
                 disabled={!importContent.trim()}
-                className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs disabled:opacity-50"
+                className="px-4 py-2 text-xs font-bold text-white bg-[#5B4DFB] hover:bg-[#4E3EF0] rounded-xl shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
               >
                 Parse & Ingest Events
               </button>

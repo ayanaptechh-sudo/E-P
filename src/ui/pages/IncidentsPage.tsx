@@ -5,13 +5,19 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../services/authContext';
-import { incidentRepo } from '../../database/repositories/alertRepo';
-import { userRepo } from '../../database/repositories/userRepo';
-import { Incident, IncidentPriority, IncidentStatus, IncidentTimeline, TimelineEventType } from '../../database/types';
+import { incidentRepo, alertRepo } from '../../database/repositories/alertRepo';
+import { userRepo, auditRepo } from '../../database/repositories/userRepo';
+import {
+  Incident,
+  IncidentStatus,
+  IncidentPriority,
+  TimelineEventType,
+} from '../../database/types';
 import { DataTable, Column, Modal } from '../components/DataTable';
 import { RiskBadge } from '../components/CommonUI';
 import { incidentService } from '../../core/incidentService';
 import {
+  generateIncidentReportData,
   generateIncidentReportHtml,
   generateIncidentReportPdf,
   exportReportFile,
@@ -23,31 +29,31 @@ export const IncidentsPage: React.FC = () => {
   const [selectedIncident, setSelectedIncident] = useState<
     (Incident & { username?: string; assigned_name?: string }) | null
   >(null);
-  const [timeline, setTimeline] = useState<IncidentTimeline[]>([]);
+  const [timeline, setTimeline] = useState<ReturnType<typeof incidentRepo.getTimeline>>([]);
 
-  // Modals
+  const users = useMemo(() => userRepo.getAll(), []);
+
+  // Create Incident Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isAddTimelineModalOpen, setIsAddTimelineModalOpen] = useState(false);
-
-  // Create Form State
   const [newTitle, setNewTitle] = useState('');
+  const [newPriority, setNewPriority] = useState<IncidentPriority>('Medium');
   const [newUserId, setNewUserId] = useState('');
-  const [newPriority, setNewPriority] = useState<IncidentPriority>('High');
   const [newAssignedTo, setNewAssignedTo] = useState('');
   const [newSummary, setNewSummary] = useState('');
 
-  // Add Timeline Event Form State
+  // Add Timeline Event Modal State
+  const [isAddTimelineModalOpen, setIsAddTimelineModalOpen] = useState(false);
   const [eventType, setEventType] = useState<TimelineEventType>('Review');
   const [eventDesc, setEventDesc] = useState('');
-
-  const users = useMemo(() => userRepo.getAll(), []);
 
   const reload = () => {
     setIncidents(incidentRepo.getAll());
     if (selectedIncident) {
       const refreshed = incidentRepo.getById(selectedIncident.incident_id);
-      setSelectedIncident(refreshed);
-      setTimeline(incidentRepo.getTimeline(selectedIncident.incident_id));
+      if (refreshed) {
+        setSelectedIncident(refreshed);
+        setTimeline(incidentRepo.getTimeline(refreshed.incident_id));
+      }
     }
   };
 
@@ -73,8 +79,17 @@ export const IncidentsPage: React.FC = () => {
     setNewTitle('');
     setNewSummary('');
     reload();
-    const fullInc = incidentRepo.getById(created.incident_id);
-    if (fullInc) handleSelectIncident(fullInc);
+    handleSelectIncident(created);
+  };
+
+  const handleUpdateStatus = async (status: IncidentStatus) => {
+    if (!selectedIncident || !currentUser) return;
+    await incidentService.updateIncident(
+      selectedIncident.incident_id,
+      { status },
+      currentUser.username
+    );
+    reload();
   };
 
   const handleAddTimelineEntry = async (e: React.FormEvent) => {
@@ -93,39 +108,13 @@ export const IncidentsPage: React.FC = () => {
     reload();
   };
 
-  const handleUpdateStatus = async (status: IncidentStatus) => {
-    if (!selectedIncident || !currentUser) return;
-    await incidentService.updateIncident(
-      selectedIncident.incident_id,
-      { status },
-      currentUser.username
-    );
-    reload();
-  };
-
   const handleExportReport = async (format: 'html' | 'pdf') => {
     if (!selectedIncident || !currentUser) return;
 
-    const reportData = {
-      reportId: `REP-${selectedIncident.incident_number}`,
-      generatedAt: new Date().toISOString(),
-      generatedBy: currentUser.username,
-      incident: selectedIncident,
-      timeline,
-      username: selectedIncident.username || selectedIncident.user_id,
-      assignedToName: selectedIncident.assigned_name || 'Unassigned',
-      telemetryLimitations: [
-        'Client-side browser evaluation only. No native OS root interception.',
-        'Network transit verification relies on endpoint history and voluntary scan records.',
-      ],
-      recommendations: [
-        'Enforce mandatory local prompt redaction before pasting code into public AI models.',
-        'Rotate exposed credentials immediately if evidence suggests external transmission.',
-        'Schedule employee security awareness refresher on institutional AI policies.',
-      ],
-    };
+    const reportData = generateIncidentReportData(selectedIncident.incident_id);
+    if (!reportData) return;
 
-    const fileName = `${selectedIncident.incident_number}_Dossier_${Date.now()}.${format}`;
+    const fileName = `PromptShield-Incident-${selectedIncident.incident_number}.${format}`;
 
     if (format === 'html') {
       const html = generateIncidentReportHtml(reportData);
@@ -154,7 +143,7 @@ export const IncidentsPage: React.FC = () => {
     {
       header: 'Incident ID',
       accessor: (inc) => (
-        <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+        <span className="font-mono font-bold text-[#5B4DFB]">
           {inc.incident_number}
         </span>
       ),
@@ -165,8 +154,8 @@ export const IncidentsPage: React.FC = () => {
       header: 'Title',
       accessor: (inc) => (
         <div>
-          <div className="font-semibold text-slate-900 dark:text-white">{inc.title}</div>
-          <div className="text-[11px] text-slate-500 line-clamp-1">{inc.summary}</div>
+          <div className="font-bold text-gray-900 text-xs">{inc.title}</div>
+          <div className="text-[11px] text-gray-500 line-clamp-1">{inc.summary}</div>
         </div>
       ),
       sortable: true,
@@ -182,12 +171,12 @@ export const IncidentsPage: React.FC = () => {
       header: 'Status',
       accessor: (inc) => (
         <span
-          className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${
+          className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
             inc.status === 'Open'
-              ? 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300'
+              ? 'bg-rose-50 text-rose-800 border-rose-300'
               : inc.status === 'Closed'
-              ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300'
-              : 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300'
+              ? 'bg-gray-100 text-gray-700 border-gray-300'
+              : 'bg-amber-50 text-amber-800 border-amber-300'
           }`}
         >
           {inc.status}
@@ -200,12 +189,12 @@ export const IncidentsPage: React.FC = () => {
     },
     {
       header: 'Assigned',
-      accessor: (inc) => inc.assigned_name || <span className="text-slate-400 italic">Unassigned</span>,
+      accessor: (inc) => inc.assigned_name ? <span className="font-medium text-gray-800">{inc.assigned_name}</span> : <span className="text-gray-400 italic">Unassigned</span>,
     },
     {
       header: 'Opened',
       accessor: (inc) => (
-        <span className="font-mono text-[11px] text-slate-500">
+        <span className="font-mono text-[11px] text-gray-500">
           {new Date(inc.opened_at).toLocaleDateString()}
         </span>
       ),
@@ -218,7 +207,7 @@ export const IncidentsPage: React.FC = () => {
       accessor: (inc) => (
         <button
           onClick={() => handleSelectIncident(inc)}
-          className="px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded border border-slate-300 dark:border-slate-700"
+          className="px-3 py-1.5 text-xs font-bold text-[#5B4DFB] hover:text-[#4E3EF0] bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200/80 transition-colors cursor-pointer"
         >
           View Dossier &rarr;
         </button>
@@ -228,12 +217,12 @@ export const IncidentsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">
             Security Incidents & Evidence Timeline
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">
             Formal investigation cases with strict separation of scan vs attempted vs confirmed transmission evidence
           </p>
         </div>
@@ -244,7 +233,7 @@ export const IncidentsPage: React.FC = () => {
             setNewSummary('');
             setIsCreateModalOpen(true);
           }}
-          className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5 self-start"
+          className="px-4 py-2 text-xs font-bold text-white bg-[#5B4DFB] hover:bg-[#4E3EF0] rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -255,22 +244,22 @@ export const IncidentsPage: React.FC = () => {
 
       {/* Incident Detail Drawer / Panel if Selected */}
       {selectedIncident && (
-        <div className="bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/60 rounded-xl p-6 shadow-md mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 gap-4">
+        <div className="bg-white border border-gray-200/90 rounded-2xl p-6 sm:p-8 shadow-xs mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-150 gap-4">
             <div>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-base font-extrabold text-indigo-600 dark:text-indigo-400">
+                <span className="font-mono text-base font-extrabold text-[#5B4DFB]">
                   {selectedIncident.incident_number}
                 </span>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                <h2 className="text-base font-bold text-gray-900">
                   {selectedIncident.title}
                 </h2>
                 <RiskBadge level={selectedIncident.priority} size="sm" />
               </div>
-              <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
-                <span>User: <strong>{selectedIncident.username}</strong></span>
-                <span>Assigned: <strong>{selectedIncident.assigned_name || 'Unassigned'}</strong></span>
-                <span>Opened: <strong>{new Date(selectedIncident.opened_at).toLocaleDateString()}</strong></span>
+              <div className="flex items-center gap-4 text-xs text-gray-500 mt-1 font-medium">
+                <span>User: <strong className="text-gray-800">{selectedIncident.username}</strong></span>
+                <span>Assigned: <strong className="text-gray-800">{selectedIncident.assigned_name || 'Unassigned'}</strong></span>
+                <span>Opened: <strong className="text-gray-800">{new Date(selectedIncident.opened_at).toLocaleDateString()}</strong></span>
               </div>
             </div>
 
@@ -278,7 +267,7 @@ export const IncidentsPage: React.FC = () => {
               <select
                 value={selectedIncident.status}
                 onChange={(e) => handleUpdateStatus(e.target.value as IncidentStatus)}
-                className="px-3 py-1.5 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200"
+                className="px-3 py-1.5 text-xs font-bold bg-gray-50 border border-gray-200 rounded-xl text-gray-800 cursor-pointer shadow-2xs"
               >
                 <option value="Open">Status: Open</option>
                 <option value="In Progress">Status: In Progress</option>
@@ -288,28 +277,28 @@ export const IncidentsPage: React.FC = () => {
 
               <button
                 onClick={() => setIsAddTimelineModalOpen(true)}
-                className="px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 rounded-lg"
+                className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer shadow-2xs"
               >
                 + Add Timeline Event
               </button>
 
               <button
                 onClick={() => handleExportReport('pdf')}
-                className="px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-100"
+                className="px-3.5 py-1.5 text-xs font-bold text-[#5B4DFB] bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors cursor-pointer"
               >
                 Export PDF
               </button>
 
               <button
                 onClick={() => handleExportReport('html')}
-                className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-lg"
+                className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
               >
                 Export HTML
               </button>
 
               <button
                 onClick={() => setSelectedIncident(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md"
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -319,21 +308,21 @@ export const IncidentsPage: React.FC = () => {
           </div>
 
           <div className="mt-4">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
               Case Summary & Context
             </h4>
-            <p className="text-xs text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-200 dark:border-slate-800/80 leading-relaxed">
+            <p className="text-xs text-gray-800 bg-gray-50 p-4 rounded-xl border border-gray-200 leading-relaxed font-medium">
               {selectedIncident.summary}
             </p>
           </div>
 
           {/* Chronological Timeline */}
           <div className="mt-6">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-3">
               Audited Chronological Timeline ({timeline.length} events)
             </h4>
 
-            <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-lg text-xs text-blue-800 dark:text-blue-300 mb-4">
+            <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-xl text-xs text-blue-900 mb-4">
               <strong>Evidence Invariant:</strong> The timeline rigorously distinguishes <em>Scan</em> vs <em>Attempted Submission</em> vs <em>Confirmed Submission</em>. No transmission is inferred unless corroborated by network endpoint logs.
             </div>
 
@@ -341,25 +330,25 @@ export const IncidentsPage: React.FC = () => {
               {timeline.map((item, idx) => (
                 <div
                   key={item.timeline_id}
-                  className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200/80 dark:border-slate-800 text-xs"
+                  className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200 text-xs"
                 >
-                  <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-mono shrink-0 font-bold">
+                  <div className="w-6 h-6 rounded-full bg-indigo-100 text-[#5B4DFB] flex items-center justify-center text-[10px] font-mono shrink-0 font-bold">
                     {idx + 1}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-900 dark:text-white">
+                      <span className="font-bold text-gray-900">
                         {item.event_type}
                       </span>
-                      <span className="font-mono text-[11px] text-slate-400">
+                      <span className="font-mono text-[11px] text-gray-500">
                         {new Date(item.event_time).toISOString().replace('T', ' ').slice(0, 19)} UTC
                       </span>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-300 mt-1 leading-normal">
+                    <p className="text-gray-700 mt-1 leading-normal font-medium">
                       {item.description}
                     </p>
-                    <div className="text-[11px] text-slate-400 mt-1">
-                      Recorded by: <span className="font-medium text-slate-500">{item.recorded_by}</span>
+                    <div className="text-[11px] text-gray-400 mt-1">
+                      Recorded by: <span className="font-semibold text-gray-600">{item.recorded_by}</span>
                     </div>
                   </div>
                 </div>
@@ -394,7 +383,7 @@ export const IncidentsPage: React.FC = () => {
       >
         <form onSubmit={handleCreateIncident} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
               Incident Title
             </label>
             <input
@@ -403,19 +392,19 @@ export const IncidentsPage: React.FC = () => {
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="e.g. Unapproved Claude Prompting with Customer Database URI"
-              className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-gray-900 font-medium"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
                 Priority
               </label>
               <select
                 value={newPriority}
                 onChange={(e) => setNewPriority(e.target.value as IncidentPriority)}
-                className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none text-gray-900 font-semibold"
               >
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
@@ -425,13 +414,13 @@ export const IncidentsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
                 Subject User
               </label>
               <select
                 value={newUserId}
                 onChange={(e) => setNewUserId(e.target.value)}
-                className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none text-gray-900 font-semibold"
               >
                 <option value="">Current User ({currentUser?.username})</option>
                 {users.map((u) => (
@@ -444,13 +433,13 @@ export const IncidentsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
               Assigned Investigator
             </label>
             <select
               value={newAssignedTo}
               onChange={(e) => setNewAssignedTo(e.target.value)}
-              className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none text-gray-900 font-semibold"
             >
               <option value="">Assign to Me ({currentUser?.username})</option>
               {users.map((u) => (
@@ -462,7 +451,7 @@ export const IncidentsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
               Executive Summary & Scope
             </label>
             <textarea
@@ -471,21 +460,21 @@ export const IncidentsPage: React.FC = () => {
               value={newSummary}
               onChange={(e) => setNewSummary(e.target.value)}
               placeholder="Describe observation, workstation telemetry, and initial findings..."
-              className="mt-1 w-full p-3 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              className="mt-1 w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-gray-900 font-medium"
             />
           </div>
 
-          <div className="pt-2 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="pt-3 flex justify-end gap-2 border-t border-gray-150">
             <button
               type="button"
               onClick={() => setIsCreateModalOpen(false)}
-              className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs"
+              className="px-4 py-2 text-xs font-bold text-white bg-[#5B4DFB] hover:bg-[#4E3EF0] rounded-xl shadow-xs transition-colors cursor-pointer"
             >
               Create Incident
             </button>
@@ -502,13 +491,13 @@ export const IncidentsPage: React.FC = () => {
       >
         <form onSubmit={handleAddTimelineEntry} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
               Event Classification
             </label>
             <select
               value={eventType}
               onChange={(e) => setEventType(e.target.value as TimelineEventType)}
-              className="mt-1 w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none text-gray-900 font-semibold"
             >
               <option value="Scan">Scan (Local client text scan performed)</option>
               <option value="Finding">Finding (Specific rule triggered)</option>
@@ -522,7 +511,7 @@ export const IncidentsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
               Event Description & Metadata
             </label>
             <textarea
@@ -531,21 +520,21 @@ export const IncidentsPage: React.FC = () => {
               value={eventDesc}
               onChange={(e) => setEventDesc(e.target.value)}
               placeholder="e.g. Employee acknowledged warning and replaced credentials with redaction token."
-              className="mt-1 w-full p-3 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+              className="mt-1 w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-gray-900 font-medium"
             />
           </div>
 
-          <div className="pt-2 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="pt-3 flex justify-end gap-2 border-t border-gray-150">
             <button
               type="button"
               onClick={() => setIsAddTimelineModalOpen(false)}
-              className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs"
+              className="px-4 py-2 text-xs font-bold text-white bg-[#5B4DFB] hover:bg-[#4E3EF0] rounded-xl shadow-xs transition-colors cursor-pointer"
             >
               Append Timeline Record
             </button>

@@ -86,9 +86,9 @@ export function DataTable<T>({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
+    <div className="bg-white border border-gray-200/80 rounded-2xl overflow-hidden shadow-xs">
       {(searchFilter || actions) && (
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 border-b border-gray-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {searchFilter ? (
             <div className="relative max-w-sm w-full">
               <input
@@ -99,10 +99,10 @@ export function DataTable<T>({
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800 dark:text-slate-100"
+                className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-900 placeholder-gray-400 font-medium transition-all"
               />
               <svg
-                className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5"
+                className="w-4 h-4 text-gray-400 absolute left-2.5 top-2.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -118,23 +118,23 @@ export function DataTable<T>({
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="bg-slate-50/80 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+            <tr className="bg-gray-50/80 text-gray-700 font-bold border-b border-gray-200/80">
               {columns.map((col, idx) => {
                 const isSortable = col.sortable || !!col.sortValue;
                 return (
                   <th
                     key={idx}
                     onClick={() => handleHeaderClick(idx)}
-                    className={`py-3 px-4 font-semibold text-[11px] uppercase tracking-wider ${
+                    className={`py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-gray-700 ${
                       col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
-                    } ${isSortable ? 'cursor-pointer select-none hover:text-slate-800 dark:hover:text-slate-200' : ''} ${
+                    } ${isSortable ? 'cursor-pointer select-none hover:text-gray-900' : ''} ${
                       col.className || ''
                     }`}
                   >
                     <div className={`inline-flex items-center gap-1 ${col.align === 'right' ? 'justify-end' : ''}`}>
                       <span>{col.header}</span>
                       {sortCol === idx && (
-                        <span className="text-indigo-600 dark:text-indigo-400 font-mono text-xs">
+                        <span className="text-[#5B4DFB] font-mono text-xs font-bold">
                           {sortAsc ? '↑' : '↓'}
                         </span>
                       )}
@@ -144,13 +144,13 @@ export function DataTable<T>({
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+          <tbody className="divide-y divide-gray-100 text-gray-800">
             {paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="py-12 text-center">
                   <div className="max-w-xs mx-auto">
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{emptyTitle}</p>
-                    <p className="text-xs text-slate-400 mt-1">{emptySubtitle}</p>
+                    <p className="text-sm font-bold text-gray-900">{emptyTitle}</p>
+                    <p className="text-xs text-gray-500 mt-1">{emptySubtitle}</p>
                   </div>
                 </td>
               </tr>
@@ -158,7 +158,7 @@ export function DataTable<T>({
               paginatedData.map(row => (
                 <tr
                   key={String(row[keyField])}
-                  className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                  className="hover:bg-gray-50/70 transition-colors"
                 >
                   {columns.map((col, colIdx) => {
                     let cellContent: React.ReactNode = null;
@@ -186,27 +186,27 @@ export function DataTable<T>({
       </div>
 
       {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+        <div className="px-4 py-3 border-t border-gray-200/80 flex items-center justify-between text-xs text-gray-600 bg-gray-50/30">
           <span>
-            Showing <strong className="text-slate-800 dark:text-slate-200 tabular-nums">{(currentPage - 1) * pageSize + 1}</strong> to{' '}
-            <strong className="text-slate-800 dark:text-slate-200 tabular-nums">{Math.min(currentPage * pageSize, filteredData.length)}</strong> of{' '}
-            <strong className="text-slate-800 dark:text-slate-200 tabular-nums">{filteredData.length}</strong> records
+            Showing <strong className="text-gray-900 font-bold tabular-nums">{(currentPage - 1) * pageSize + 1}</strong> to{' '}
+            <strong className="text-gray-900 font-bold tabular-nums">{Math.min(currentPage * pageSize, filteredData.length)}</strong> of{' '}
+            <strong className="text-gray-900 font-bold tabular-nums">{filteredData.length}</strong> records
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="px-3 py-1.5 rounded-lg border border-gray-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white text-gray-700 shadow-2xs transition-all cursor-pointer"
             >
               Previous
             </button>
-            <span className="px-2 font-mono tabular-nums">
+            <span className="px-2 font-mono tabular-nums text-gray-600 font-medium">
               {currentPage} / {totalPages}
             </span>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="px-3 py-1.5 rounded-lg border border-gray-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white text-gray-700 shadow-2xs transition-all cursor-pointer"
             >
               Next
             </button>
@@ -237,19 +237,19 @@ export const Modal: React.FC<{
       : 'max-w-lg';
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-900/40 backdrop-blur-xs flex items-center justify-center p-4">
       <div
-        className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl w-full ${maxWidthClass} overflow-hidden`}
+        className={`bg-white border border-gray-200 rounded-2xl shadow-xl w-full ${maxWidthClass} overflow-hidden`}
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-gray-150 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">{title}</h3>
-            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+            <h3 className="text-base font-bold text-gray-900">{title}</h3>
+            {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md"
+            className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
