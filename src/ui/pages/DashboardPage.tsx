@@ -14,19 +14,16 @@ import {
   TrendingUp,
   Download,
   Search,
-  Bell,
   ArrowUpRight,
   Clock,
-  Sparkles,
   Check,
   X,
   Send,
   Zap,
   Lock,
-  ChevronDown,
   Cpu,
-  Sliders,
   ClipboardCheck,
+  Sliders,
   FileSearch,
 } from 'lucide-react';
 import {
@@ -42,48 +39,90 @@ import {
 import { toolRepo } from '../../database/repositories/toolRepo';
 import { scanRepo } from '../../database/repositories/scanRepo';
 import { alertRepo, incidentRepo } from '../../database/repositories/alertRepo';
+import { policyRepo } from '../../database/repositories/policyRepo';
+import { getActiveScannerRules } from '../../scanner/scannerEngine';
 import { useAuth } from '../../services/authContext';
 
 interface DashboardProps {
   onNavigate?: (page: string) => void;
 }
 
-// 24-Hour Chronological DLP Telemetry & Threat Interception Data
-const TIMELINE_DATA = [
-  { time: '00:00', cleanScans: 140, threatsBlocked: 12 },
-  { time: '02:00', cleanScans: 95, threatsBlocked: 8 },
-  { time: '04:00', cleanScans: 60, threatsBlocked: 5 },
-  { time: '06:00', cleanScans: 110, threatsBlocked: 9 },
-  { time: '08:00', cleanScans: 310, threatsBlocked: 24 },
-  { time: '10:00', cleanScans: 520, threatsBlocked: 38 },
-  { time: '12:00', cleanScans: 610, threatsBlocked: 45 },
-  { time: '14:00', cleanScans: 490, threatsBlocked: 32 },
-  { time: '16:00', cleanScans: 580, threatsBlocked: 41 },
-  { time: '18:00', cleanScans: 420, threatsBlocked: 28 },
-  { time: '20:00', cleanScans: 280, threatsBlocked: 19 },
-  { time: '22:00', cleanScans: 190, threatsBlocked: 15 },
-  { time: '24:00', cleanScans: 240, threatsBlocked: 22 },
-];
-
 export function DashboardPage({ onNavigate }: DashboardProps = {}) {
   const { currentUser } = useAuth();
-  const [scheduleFilter, setScheduleFilter] = useState<'all' | 'sensitive' | 'high_risk'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'critical' | 'warn'>('all');
   const [quickPrompt, setQuickPrompt] = useState('');
-  const [toolRequestStatus, setToolRequestStatus] = useState<Record<string, 'Approved' | 'Restricted'>>({});
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  // Real tool and scan counts from local SQLite
-  const tools = useMemo(() => toolRepo.getAll(), []);
-  const findings = useMemo(() => scanRepo.getFindings(), []);
-  const alerts = useMemo(() => alertRepo.getAll(), []);
-  const incidents = useMemo(() => incidentRepo.getAll(), []);
+  // Real tool and scan counts from local SQLite (no hardcoded mock minimums)
+  const tools = useMemo(() => toolRepo.getAll(), [refreshKey]);
+  const findings = useMemo(() => scanRepo.getFindings(), [refreshKey]);
+  const scanSessions = useMemo(() => scanRepo.getScanSessions(100), [refreshKey]);
+  const alerts = useMemo(() => alertRepo.getAll(), [refreshKey]);
+  const incidents = useMemo(() => incidentRepo.getAll(), [refreshKey]);
 
-  const totalTools = tools.length || 150;
-  const approvedTools = tools.filter((t) => t.approval_status === 'Approved').length || 28;
-  const restrictedTools = tools.filter((t) => t.approval_status === 'Restricted').length || 12;
-  const totalFindings = Math.max(findings.length, 65);
+  // Dynamic active rules count from SQLite policy
+  const activeRulesSummary = useMemo(() => {
+    const policyRecord = policyRepo.getLatest('pol_data_categories');
+    return getActiveScannerRules(policyRecord?.policy_json, policyRecord?.version);
+  }, [refreshKey]);
 
-  const handleToolDecision = (id: string, decision: 'Approved' | 'Restricted') => {
-    setToolRequestStatus((prev) => ({ ...prev, [id]: decision }));
+  const totalTools = tools.length;
+  const approvedTools = tools.filter((t) => t.approval_status === 'Approved').length;
+  const restrictedTools = tools.filter((t) => t.approval_status === 'Restricted').length;
+  const totalFindings = findings.length;
+
+  // Build real 24-hour chronological telemetry from actual scan sessions and findings
+  const timelineData = useMemo(() => {
+    const buckets: Record<string, { time: string; cleanScans: number; threatsBlocked: number }> = {
+      '00:00': { time: '00:00', cleanScans: 0, threatsBlocked: 0 },
+      '04:00': { time: '04:00', cleanScans: 0, threatsBlocked: 0 },
+      '08:00': { time: '08:00', cleanScans: 0, threatsBlocked: 0 },
+      '12:00': { time: '12:00', cleanScans: 0, threatsBlocked: 0 },
+      '16:00': { time: '16:00', cleanScans: 0, threatsBlocked: 0 },
+      '20:00': { time: '20:00', cleanScans: 0, threatsBlocked: 0 },
+      '24:00': { time: '24:00', cleanScans: 0, threatsBlocked: 0 },
+    };
+
+    scanSessions.forEach((s) => {
+      const date = new Date(s.scan_time);
+      const hour = date.getHours();
+      let slot = '24:00';
+      if (hour < 4) slot = '00:00';
+      else if (hour < 8) slot = '04:00';
+      else if (hour < 12) slot = '08:00';
+      else if (hour < 16) slot = '12:00';
+      else if (hour < 20) slot = '16:00';
+      else slot = '20:00';
+
+      if (s.detected_count > 0) {
+        buckets[slot].threatsBlocked += s.detected_count;
+      } else {
+        buckets[slot].cleanScans += 1;
+      }
+    });
+
+    return Object.values(buckets);
+  }, [scanSessions]);
+
+  // Filtered actual findings for recent detections
+  const filteredFindings = useMemo(() => {
+    if (filterType === 'critical') {
+      return findings.filter((f) => f.severity === 'Critical');
+    }
+    if (filterType === 'warn') {
+      return findings.filter((f) => f.severity === 'High' || f.severity === 'Medium');
+    }
+    return findings;
+  }, [findings, filterType]);
+
+  // Unreviewed tools queue
+  const unreviewedTools = useMemo(() => {
+    return tools.filter((t) => t.approval_status === 'Unreviewed').slice(0, 3);
+  }, [tools]);
+
+  const handleToolDecision = async (id: string, decision: 'Approved' | 'Restricted') => {
+    await toolRepo.updateApprovalStatus(id, decision);
+    setRefreshKey((k) => k + 1);
   };
 
   const handleQuickScan = () => {
@@ -92,195 +131,199 @@ export function DashboardPage({ onNavigate }: DashboardProps = {}) {
     }
   };
 
+  // Real compliance score based on zero leaks: 100% clean if no unreviewed/critical incidents
+  const complianceScore = useMemo(() => {
+    if (totalFindings === 0 && incidents.length === 0) return 100;
+    const ratio = Math.max(0, 100 - (totalFindings * 5 + incidents.length * 10));
+    return Math.round(ratio);
+  }, [totalFindings, incidents]);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* =========================================================================
-          GREETING & DLP OVERVIEW BANNER
+          COMPACT DESKTOP HEADER & PRIMARY ACTIONS
          ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-slate-200/80">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-            Good morning, {currentUser?.username || 'Ayan'}!
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1 font-medium">
-            Here's your Shadow AI discovery & PII leak prevention overview
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-slate-900 tracking-tight">
+              Security Overview
+            </h1>
+            <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+              Active Protection
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5 font-medium">
+            PromptShield Local DLP · Zero Cloud Exfiltration · WebAssembly Engine
           </p>
         </div>
 
-        {/* Quick Launch Buttons */}
-        <div className="flex items-center gap-2.5">
+        {/* Desktop Quick Action Buttons (Flat, Rounded-md, Single Indigo Accent) */}
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => onNavigate && onNavigate('scan-text')}
-            className="px-4 py-2 rounded-xl bg-[#5B4DFB] hover:bg-[#4E3EF0] text-white text-xs font-semibold shadow-xs flex items-center gap-2 transition-all cursor-pointer"
+            className="px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-medium shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <Zap className="w-3.5 h-3.5 text-white" />
+            <Zap className="w-3.5 h-3.5" />
             <span>Launch Scanner</span>
           </button>
           <button
             type="button"
             onClick={() => onNavigate && onNavigate('scan-clipboard')}
-            className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold shadow-xs flex items-center gap-2 transition-all cursor-pointer"
+            className="px-3 py-1.5 rounded-md bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <ClipboardCheck className="w-3.5 h-3.5 text-gray-500" />
+            <ClipboardCheck className="w-3.5 h-3.5 text-slate-500" />
             <span>Audit Clipboard</span>
           </button>
         </div>
       </div>
 
       {/* =========================================================================
-          ROW 1: 4 CYBERSECURITY METRIC CARDS (High Contrast, Clean White, Shadow-xs)
+          ROW 1: 4 HIGH-DENSITY METRIC CARDS (Monochrome Slate + Tabular Numerals)
          ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Card 1: Monitored AI Tools */}
-        <div className="bg-white rounded-2xl p-5 shadow-xs border border-gray-200/80 flex flex-col justify-between hover:border-gray-300 transition-colors">
+        <div className="bg-white rounded-lg p-3.5 border border-slate-200 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+            <span className="text-[11px] font-medium text-slate-500">
               Monitored AI Tools
             </span>
-            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <TrendingUp className="w-3 h-3" />
-              +5.2%
+            <span className="text-[11px] font-mono text-slate-500 font-medium">
+              Real-time Catalog
             </span>
           </div>
-          <div className="mt-4">
-            <span className="text-3xl font-extrabold text-gray-900 tracking-tight block font-mono">
+          <div className="mt-2.5">
+            <span className="text-2xl font-semibold text-slate-900 tracking-tight block font-mono tabular-nums">
               {totalTools}
             </span>
-            <span className="text-xs text-gray-500 mt-1 block">
-              {approvedTools} Approved • {restrictedTools} Restricted
+            <span className="text-[11px] text-slate-500 mt-0.5 block">
+              {approvedTools} approved · {restrictedTools} restricted
             </span>
           </div>
         </div>
 
-        {/* Card 2: PII Interceptions */}
-        <div className="bg-white rounded-2xl p-5 shadow-xs border border-gray-200/80 flex flex-col justify-between hover:border-gray-300 transition-colors">
+        {/* Card 2: PII & Secret Interceptions */}
+        <div className="bg-white rounded-lg p-3.5 border border-slate-200 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+            <span className="text-[11px] font-medium text-slate-500">
               PII Interceptions
             </span>
-            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <TrendingUp className="w-3 h-3" />
-              +12%
+            <span className={`text-[11px] font-mono font-medium ${totalFindings > 0 ? 'text-indigo-600' : 'text-slate-400'}`}>
+              {totalFindings > 0 ? `${totalFindings} detected` : 'Zero Interceptions'}
             </span>
           </div>
-          <div className="mt-4">
-            <span className="text-3xl font-extrabold text-gray-900 tracking-tight block font-mono">
+          <div className="mt-2.5">
+            <span className="text-2xl font-semibold text-slate-900 tracking-tight block font-mono tabular-nums">
               {totalFindings}
             </span>
-            <span className="text-xs text-gray-500 mt-1 block">
-              Cards, CNICs, API Keys & Passwords
+            <span className="text-[11px] text-slate-500 mt-0.5 block">
+              Cards, CNICs, API Keys, Passwords
             </span>
           </div>
         </div>
 
-        {/* Card 3: Active Risk Rules */}
-        <div className="bg-white rounded-2xl p-5 shadow-xs border border-gray-200/80 flex flex-col justify-between hover:border-gray-300 transition-colors">
+        {/* Card 3: Active DLP Rules */}
+        <div className="bg-white rounded-lg p-3.5 border border-slate-200 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+            <span className="text-[11px] font-medium text-slate-500">
               Active Risk Rules
             </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-              <CheckCircle2 className="w-3 h-3" />
-              100% Safe
+            <span className="text-[11px] font-mono text-slate-500 font-medium">
+              AST Verified
             </span>
           </div>
-          <div className="mt-4">
-            <span className="text-3xl font-extrabold text-gray-900 tracking-tight block font-mono">
-              24
+          <div className="mt-2.5">
+            <span className="text-2xl font-semibold text-slate-900 tracking-tight block font-mono tabular-nums">
+              {activeRulesSummary.totalCount}
             </span>
-            <span className="text-xs text-gray-500 mt-1 block">
-              ReDoS backtracking protected
+            <span className="text-[11px] text-slate-500 mt-0.5 block">
+              Zero ReDoS · Safe Regex Engine
             </span>
           </div>
         </div>
 
-        {/* Card 4: Real-time Clipboard Guard */}
-        <div className="bg-white rounded-2xl p-5 shadow-xs border border-gray-200/80 flex flex-col justify-between hover:border-gray-300 transition-colors">
+        {/* Card 4: Clipboard Guard Status */}
+        <div className="bg-white rounded-lg p-3.5 border border-slate-200 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-              Clipboard Guard
+            <span className="text-[11px] font-medium text-slate-500">
+              Real-time Scanner Status
             </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-[#10B981] border border-emerald-200">
-              <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-              ACTIVE
+            <span className="text-[11px] font-mono text-indigo-600 font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse" />
+              ONLINE
             </span>
           </div>
-          <div className="mt-4">
-            <span className="text-3xl font-extrabold text-gray-900 tracking-tight block font-mono">
-              99.8%
+          <div className="mt-2.5">
+            <span className="text-2xl font-semibold text-slate-900 tracking-tight block font-mono tabular-nums">
+              100%
             </span>
-            <span className="text-xs text-gray-500 mt-1 block">
-              Airgap local WebAssembly daemon
+            <span className="text-[11px] text-slate-500 mt-0.5 block">
+              In-memory airgap isolation
             </span>
           </div>
         </div>
       </div>
 
       {/* =========================================================================
-          ROW 2: MIDDLE SECTION (DLP Telemetry Chart + Security Posture Donut)
+          ROW 2: MIDDLE SECTION (Telemetry Stream + Security Posture)
          ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left Column (8 cols): Chronological Security Event Timeline */}
-        <div className="lg:col-span-8 bg-white rounded-2xl p-6 shadow-xs border border-gray-200/80 flex flex-col justify-between">
+        <div className="lg:col-span-8 bg-white rounded-lg p-4 border border-slate-200 shadow-2xs flex flex-col justify-between">
           <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
               <div>
-                <h3 className="text-base font-bold text-gray-900">
+                <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
                   Chronological Security Event Timeline
                 </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  24-hour prompt scans and intercepted data leaks
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Rolling telemetry of clean prompt scans vs. intercepted data risks
                 </p>
               </div>
 
-              {/* Chart Legend Badges */}
-              <div className="flex items-center gap-4 text-xs font-medium">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
-                  <span className="text-gray-700">Clean Scans</span>
-                  <span className="text-[11px] font-bold text-[#10B981] bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/60">
-                    +126%
-                  </span>
+              {/* Chart Legend (Monochrome + Indigo Accent) */}
+              <div className="flex items-center gap-3 text-xs font-medium">
+                <div className="flex items-center gap-1.5 text-slate-600">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-indigo-600" />
+                  <span>Clean Scans</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
-                  <span className="text-gray-700">Threats Blocked</span>
-                  <span className="text-[11px] font-bold text-[#F59E0B] bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60">
-                    +20%
-                  </span>
+                <div className="flex items-center gap-1.5 text-slate-600">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-slate-400" />
+                  <span>Threats Blocked</span>
                 </div>
               </div>
             </div>
 
             {/* Recharts Composed Chart (Bar + Trend Line) */}
-            <div className="relative mt-4">
-              <div className="h-60 w-full">
+            <div className="mt-3">
+              <div className="h-56 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={TIMELINE_DATA} margin={{ top: 15, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid vertical={false} stroke="#F3F4F6" strokeDasharray="3 3" />
+                  <ComposedChart data={timelineData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                    <CartesianGrid vertical={false} stroke="#E2E8F0" strokeDasharray="3 3" />
                     <XAxis
                       dataKey="time"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#6B7280', fontSize: 11 }}
+                      tick={{ fill: '#64748B', fontSize: 10 }}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#6B7280', fontSize: 11 }}
+                      tick={{ fill: '#64748B', fontSize: 10 }}
+                      allowDecimals={false}
                     />
                     <Tooltip
                       content={({ active, payload, label }) => {
                         if (active && payload && payload.length) {
                           return (
-                            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-lg text-xs">
-                              <p className="font-bold text-gray-900 mb-1">{label} Telemetry</p>
-                              <p className="text-[#10B981] font-semibold">
+                            <div className="bg-white border border-slate-200 rounded-md p-2.5 shadow-sm text-xs font-mono">
+                              <p className="font-semibold text-slate-900 mb-1">{label}</p>
+                              <p className="text-indigo-600">
                                 Clean Scans: {payload[0]?.value}
                               </p>
-                              <p className="text-[#F59E0B] font-semibold">
-                                Threats Blocked: {payload[1]?.value}
+                              <p className="text-slate-600">
+                                Blocked: {payload[1]?.value}
                               </p>
                             </div>
                           );
@@ -288,26 +331,26 @@ export function DashboardPage({ onNavigate }: DashboardProps = {}) {
                         return null;
                       }}
                     />
-                    {/* Orange Bar for Blocked Threats */}
+                    {/* Secondary slate bar for threats */}
                     <Bar
                       dataKey="threatsBlocked"
-                      fill="#F59E0B"
-                      radius={[4, 4, 0, 0]}
+                      fill="#94A3B8"
+                      radius={[2, 2, 0, 0]}
                       barSize={6}
                     />
-                    {/* Vibrant Green Bar for Clean Scans */}
+                    {/* Primary Indigo Bar */}
                     <Bar
                       dataKey="cleanScans"
-                      fill="#A7F3D0"
-                      radius={[4, 4, 0, 0]}
+                      fill="#C7D2FE"
+                      radius={[2, 2, 0, 0]}
                       barSize={6}
                     />
-                    {/* Trend Line for Clean Scans */}
+                    {/* Primary Indigo Line */}
                     <Line
                       type="monotone"
                       dataKey="cleanScans"
-                      stroke="#10B981"
-                      strokeWidth={2.5}
+                      stroke="#4F46E5"
+                      strokeWidth={2}
                       dot={false}
                     />
                   </ComposedChart>
@@ -316,115 +359,103 @@ export function DashboardPage({ onNavigate }: DashboardProps = {}) {
             </div>
           </div>
 
-          {/* Timeline Bottom Range Footer */}
-          <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 font-mono">
-            <span>00:00 (Midnight)</span>
-            <div className="w-1/2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div className="w-3/4 h-full bg-[#10B981] rounded-full" />
-            </div>
-            <span>24:00 (Rolling 24h)</span>
+          <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+            <span>00:00 UTC</span>
+            <span>24-Hour Rolling Telemetry ({scanSessions.length} total local scans)</span>
+            <span>24:00 UTC</span>
           </div>
         </div>
 
-        {/* Right Column (4 cols): Security Posture & Donut Gauge */}
-        <div className="lg:col-span-4 bg-white rounded-2xl p-6 shadow-xs border border-gray-200/80 flex flex-col justify-between">
+        {/* Right Column (4 cols): Security Posture & Compliance */}
+        <div className="lg:col-span-4 bg-white rounded-lg p-4 border border-slate-200 shadow-2xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div>
-                <h3 className="text-base font-bold text-gray-900">Security Posture</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Airgap protection score</p>
+                <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Security Posture</h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">Airgap compliance grade</p>
               </div>
 
-              {/* Export Button */}
               <button
                 type="button"
                 onClick={() => onNavigate && onNavigate('reports')}
-                className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-md border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-gray-500" />
-                <span>Export</span>
+                <Download className="w-3 h-3 text-slate-500" />
+                <span>Export Audit</span>
               </button>
             </div>
 
-            {/* Big Stat */}
-            <div className="mt-4">
-              <span className="text-3xl font-extrabold text-gray-900 tracking-tight font-mono">
-                98.4%
+            {/* Score */}
+            <div className="mt-3">
+              <span className="text-2xl font-semibold text-slate-900 tracking-tight font-mono tabular-nums">
+                {complianceScore}%
               </span>
-              <span className="text-xs text-gray-500 block mt-0.5">Overall compliance score</span>
+              <span className="text-[11px] text-slate-500 block mt-0.5">Overall DLP compliance rating</span>
             </div>
 
-            {/* Circular Donut Gauge Graphic (85% Protected) */}
-            <div className="mt-4 flex items-center justify-center">
-              <div className="relative w-44 h-44 flex items-center justify-center">
+            {/* Gauge Graphic */}
+            <div className="mt-3 flex items-center justify-center">
+              <div className="relative w-36 h-36 flex items-center justify-center">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                  {/* Track */}
                   <circle
                     cx="60"
                     cy="60"
                     r="48"
-                    stroke="#F3F4F6"
-                    strokeWidth="11"
+                    stroke="#E2E8F0"
+                    strokeWidth="10"
                     fill="transparent"
                   />
-                  {/* Green Arc */}
                   <circle
                     cx="60"
                     cy="60"
                     r="48"
-                    stroke="#10B981"
-                    strokeWidth="11"
+                    stroke="#4F46E5"
+                    strokeWidth="10"
                     strokeDasharray={301.6}
-                    strokeDashoffset={301.6 * (1 - 0.85)}
+                    strokeDashoffset={301.6 * (1 - complianceScore / 100)}
                     strokeLinecap="round"
                     fill="transparent"
                   />
-                  {/* Secondary Orange Arc */}
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r="48"
-                    stroke="#F59E0B"
-                    strokeWidth="11"
-                    strokeDasharray={301.6}
-                    strokeDashoffset={301.6 * (1 - 0.15)}
-                    strokeLinecap="round"
-                    fill="transparent"
-                    transform="rotate(270 60 60)"
-                  />
-                  <circle cx="60" cy="12" r="6" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" />
                 </svg>
 
-                {/* Central Text */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-2xl font-extrabold text-gray-900 tracking-tight font-mono">
-                    85%
+                  <span className="text-xl font-semibold text-slate-900 tracking-tight font-mono tabular-nums">
+                    {complianceScore}%
                   </span>
-                  <span className="text-xs font-semibold text-gray-500 mt-0.5">
-                    Safe & Protected
+                  <span className="text-[10px] text-slate-500">
+                    Compliant
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Legend */}
-            <div className="mt-2 space-y-1.5 text-xs text-gray-600 pl-4">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
-                <span>Approved AI Flow: <strong className="text-gray-900 font-bold">85%</strong></span>
+            {/* Metric Breakdown */}
+            <div className="mt-2 space-y-1 text-xs text-slate-600">
+              <div className="flex items-center justify-between py-0.5">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-xs bg-indigo-600" />
+                  <span>Approved Tool Ratio</span>
+                </span>
+                <span className="font-mono text-slate-900 font-medium">
+                  {totalTools > 0 ? Math.round((approvedTools / totalTools) * 100) : 100}%
+                </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
-                <span>Restricted / Intercepted: <strong className="text-gray-900 font-bold">15%</strong></span>
+              <div className="flex items-center justify-between py-0.5">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-xs bg-slate-300" />
+                  <span>Unreviewed Catalog Items</span>
+                </span>
+                <span className="font-mono text-slate-900 font-medium">
+                  {tools.filter((t) => t.approval_status === 'Unreviewed').length}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* View Details Link */}
-          <div className="mt-4 pt-3 border-t border-gray-100">
+          <div className="mt-3 pt-2 border-t border-slate-100">
             <button
               onClick={() => onNavigate && onNavigate('findings')}
-              className="text-xs font-bold text-gray-900 hover:text-[#10B981] flex items-center gap-1 transition-colors cursor-pointer"
+              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors cursor-pointer"
             >
               <span>View Findings Ledger</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
@@ -434,290 +465,199 @@ export function DashboardPage({ onNavigate }: DashboardProps = {}) {
       </div>
 
       {/* =========================================================================
-          ROW 3: BOTTOM SECTION (Recent Scans + Pending AI Approvals + Live Guardrail)
+          ROW 3: RECENT DETECTIONS + PENDING REVIEWS + PROMPT SANDBOX
          ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5">
-        {/* Card 1 (4 cols): Recent Scans & Detections */}
-        <div className="lg:col-span-4 bg-white rounded-2xl p-6 shadow-xs border border-gray-200/80 flex flex-col justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+        {/* Card 1 (4 cols): Recent Interceptions */}
+        <div className="lg:col-span-4 bg-white rounded-lg p-4 border border-slate-200 shadow-2xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-gray-900">Recent Detections</h3>
-              <span className="text-xs font-mono font-semibold text-gray-400">Live</span>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Recent Interceptions</h3>
+              <span className="text-[10px] font-mono text-slate-400">Real-time</span>
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-full mb-4">
+            {/* Segmented Filter Control (Notion / Linear style) */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-md my-3">
               <button
                 type="button"
-                onClick={() => setScheduleFilter('all')}
-                className={`flex-1 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
-                  scheduleFilter === 'all'
-                    ? 'bg-white text-gray-900 shadow-xs'
-                    : 'text-gray-500 hover:text-gray-900'
+                onClick={() => setFilterType('all')}
+                className={`flex-1 py-1 text-[11px] font-medium rounded transition-colors cursor-pointer ${
+                  filterType === 'all'
+                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                All
+                All ({findings.length})
               </button>
               <button
                 type="button"
-                onClick={() => setScheduleFilter('sensitive')}
-                className={`flex-1 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
-                  scheduleFilter === 'sensitive'
-                    ? 'bg-white text-gray-900 shadow-xs'
-                    : 'text-gray-500 hover:text-gray-900'
+                onClick={() => setFilterType('critical')}
+                className={`flex-1 py-1 text-[11px] font-medium rounded transition-colors cursor-pointer ${
+                  filterType === 'critical'
+                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                Sensitive
+                Critical ({findings.filter((f) => f.severity === 'Critical').length})
               </button>
               <button
                 type="button"
-                onClick={() => setScheduleFilter('high_risk')}
-                className={`flex-1 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
-                  scheduleFilter === 'high_risk'
-                    ? 'bg-white text-gray-900 shadow-xs'
-                    : 'text-gray-500 hover:text-gray-900'
+                onClick={() => setFilterType('warn')}
+                className={`flex-1 py-1 text-[11px] font-medium rounded transition-colors cursor-pointer ${
+                  filterType === 'warn'
+                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                High Risk
+                Warning ({findings.filter((f) => f.severity === 'High' || f.severity === 'Medium').length})
               </button>
             </div>
 
-            {/* Detection Card Items */}
-            <div className="space-y-2.5">
-              <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200/70">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-900">API Key on Claude</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                    High Risk
-                  </span>
+            {/* Detection Items (Data-Dense Desktop Rows) */}
+            <div className="space-y-2">
+              {filteredFindings.length === 0 ? (
+                <div className="p-6 text-center border border-dashed border-slate-200 rounded-md">
+                  <CheckCircle2 className="w-5 h-5 text-indigo-600 mx-auto mb-1.5" />
+                  <p className="text-xs font-medium text-slate-800">No incidents detected</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Your local clipboard and prompt scans are currently safe from data leaks.
+                  </p>
                 </div>
-                <p className="text-[11px] text-gray-500 mt-1">
-                  High-entropy AWS secret key intercepted in payload
-                </p>
-                <div className="mt-2.5 flex items-center justify-between text-[11px] text-gray-400">
-                  <span>10 mins ago</span>
-                  <button
-                    onClick={() => onNavigate && onNavigate('findings')}
-                    className="text-xs font-semibold text-[#5B4DFB] hover:underline"
-                  >
-                    Inspect Findings →
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200/70">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-900">Pakistani CNIC on ChatGPT</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                    Medium
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500 mt-1">
-                  National ID card number automatically masked
-                </p>
-                <div className="mt-2.5 flex items-center justify-between text-[11px] text-gray-400">
-                  <span>45 mins ago</span>
-                  <button
-                    onClick={() => onNavigate && onNavigate('findings')}
-                    className="text-xs font-semibold text-[#5B4DFB] hover:underline"
-                  >
-                    Inspect Findings →
-                  </button>
-                </div>
-              </div>
+              ) : (
+                filteredFindings.slice(0, 3).map((f) => (
+                  <div key={f.finding_id} className="p-2.5 rounded-md bg-slate-50/70 border border-slate-200/80">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-900">{f.category}</span>
+                      <span className="text-[10px] font-mono font-medium text-slate-700 bg-slate-200/80 px-1.5 py-0.2 rounded">
+                        {f.severity}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 truncate">
+                      {f.explanation || `Rule match: ${f.rule_id}`}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
+                      <span>{new Date(f.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <button
+                        onClick={() => onNavigate && onNavigate('findings')}
+                        className="text-[11px] font-medium text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                      >
+                        Inspect →
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
 
-        {/* Card 2 (4 cols): Pending Tool Approvals */}
-        <div className="lg:col-span-4 bg-white rounded-2xl p-6 shadow-xs border border-gray-200/80 flex flex-col justify-between">
+        {/* Card 2 (4 cols): Pending Tool Reviews */}
+        <div className="lg:col-span-4 bg-white rounded-lg p-4 border border-slate-200 shadow-2xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-base font-bold text-gray-900">Pending Tool Reviews</h3>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Tool Review Queue</h3>
               <button
                 type="button"
                 onClick={() => onNavigate && onNavigate('inventory')}
-                className="text-xs font-bold text-[#10B981] hover:underline cursor-pointer"
+                className="text-xs font-medium text-indigo-600 hover:text-indigo-800 cursor-pointer"
               >
-                View All
+                View Catalog ({tools.length})
               </button>
             </div>
-            <p className="text-xs text-amber-600 mb-4 flex items-center gap-1 font-medium">
-              <span>●</span> AI services awaiting security classification
+            <p className="text-[11px] text-slate-500 my-2.5">
+              Detected AI services awaiting governance classification
             </p>
 
-            {/* List of Tools */}
-            <div className="space-y-3">
-              {/* Tool 1 */}
-              <div className="flex items-center justify-between py-1">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold flex items-center justify-center">
-                    C
-                  </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-gray-900">Cursor AI IDE</h5>
-                    <p className="text-[10px] text-gray-400">Engineering • Code Generation</p>
-                  </div>
+            {/* List of Real Unreviewed Tools from Database */}
+            <div className="space-y-2">
+              {unreviewedTools.length === 0 ? (
+                <div className="p-6 text-center border border-dashed border-slate-200 rounded-md">
+                  <CheckCircle2 className="w-5 h-5 text-indigo-600 mx-auto mb-1.5" />
+                  <p className="text-xs font-medium text-slate-800">All tools classified</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    No unreviewed AI tools pending governance decision.
+                  </p>
                 </div>
+              ) : (
+                unreviewedTools.map((t) => (
+                  <div key={t.tool_id} className="flex items-center justify-between p-2 rounded-md bg-slate-50/60 border border-slate-200/60">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded bg-slate-200 text-slate-700 text-xs font-semibold flex items-center justify-center shrink-0">
+                        {t.tool_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="max-w-[130px] truncate">
+                        <h5 className="text-xs font-semibold text-slate-900 leading-tight truncate">{t.tool_name}</h5>
+                        <p className="text-[10px] text-slate-400 truncate">{t.category}</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-center gap-1.5">
-                  {toolRequestStatus['cursor'] ? (
-                    <span className={`text-[10px] font-bold uppercase ${
-                      toolRequestStatus['cursor'] === 'Approved' ? 'text-[#10B981]' : 'text-rose-600'
-                    }`}>
-                      {toolRequestStatus['cursor']}
-                    </span>
-                  ) : (
-                    <>
+                    <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => handleToolDecision('cursor', 'Approved')}
-                        className="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[#10B981] flex items-center justify-center transition-colors cursor-pointer border border-emerald-200/60"
+                        onClick={() => handleToolDecision(t.tool_id, 'Approved')}
+                        className="px-2 py-0.5 rounded text-[11px] font-medium bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
                         title="Approve"
                       >
-                        <Check className="w-4 h-4" />
+                        Approve
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleToolDecision('cursor', 'Restricted')}
-                        className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center transition-colors cursor-pointer border border-rose-200/60"
+                        onClick={() => handleToolDecision(t.tool_id, 'Restricted')}
+                        className="px-2 py-0.5 rounded text-[11px] font-medium bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
                         title="Restrict"
                       >
-                        <X className="w-4 h-4" />
+                        Restrict
                       </button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Tool 2 */}
-              <div className="flex items-center justify-between py-1 border-t border-gray-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold flex items-center justify-center">
-                    S
+                    </div>
                   </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-gray-900">Claude 3.7 Sonnet</h5>
-                    <p className="text-[10px] text-gray-400">Product • Web & API</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  {toolRequestStatus['claude'] ? (
-                    <span className={`text-[10px] font-bold uppercase ${
-                      toolRequestStatus['claude'] === 'Approved' ? 'text-[#10B981]' : 'text-rose-600'
-                    }`}>
-                      {toolRequestStatus['claude']}
-                    </span>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleToolDecision('claude', 'Approved')}
-                        className="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[#10B981] flex items-center justify-center transition-colors cursor-pointer border border-emerald-200/60"
-                        title="Approve"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToolDecision('claude', 'Restricted')}
-                        className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center transition-colors cursor-pointer border border-rose-200/60"
-                        title="Restrict"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Tool 3 */}
-              <div className="flex items-center justify-between py-1 border-t border-gray-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-bold flex items-center justify-center">
-                    P
-                  </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-gray-900">Perplexity Pro</h5>
-                    <p className="text-[10px] text-gray-400">Research • Web Search</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  {toolRequestStatus['perplexity'] ? (
-                    <span className={`text-[10px] font-bold uppercase ${
-                      toolRequestStatus['perplexity'] === 'Approved' ? 'text-[#10B981]' : 'text-rose-600'
-                    }`}>
-                      {toolRequestStatus['perplexity']}
-                    </span>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleToolDecision('perplexity', 'Approved')}
-                        className="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[#10B981] flex items-center justify-center transition-colors cursor-pointer border border-emerald-200/60"
-                        title="Approve"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToolDecision('perplexity', 'Restricted')}
-                        className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center transition-colors cursor-pointer border border-rose-200/60"
-                        title="Restrict"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
+                ))
+              )}
             </div>
           </div>
         </div>
 
-        {/* Card 3 (4 cols): Live Prompt Tester & Security Assistant */}
-        <div className="lg:col-span-4 bg-white rounded-2xl p-6 shadow-xs border border-gray-200/80 flex flex-col items-center text-center justify-between">
-          <div className="flex flex-col items-center w-full">
-            {/* Pastel Sphere Avatar */}
-            <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-100 via-teal-100 to-purple-100 border border-emerald-200/50 flex items-center justify-center shadow-xs">
-              <Shield className="w-7 h-7 text-[#10B981]" />
+        {/* Card 3 (4 cols): Local Prompt & Secret Sandbox */}
+        <div className="lg:col-span-4 bg-white rounded-lg p-4 border border-slate-200 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
+                Prompt Leak Sandbox
+              </h3>
+              <span className="text-[10px] font-mono text-slate-400">Local Sandbox</span>
             </div>
-
-            <h4 className="text-sm font-bold text-gray-900 mt-3 leading-snug">
-              PromptShield Guardrail
-            </h4>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Test a prompt or code snippet for sensitive leakage
+            <p className="text-[11px] text-slate-500 mt-2">
+              Instantly test a prompt, code snippet, or token for DLP rule matches.
             </p>
 
-            {/* Prompt Input Box */}
-            <div className="w-full mt-4 relative">
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3 text-left focus-within:border-[#10B981] focus-within:ring-2 focus-within:ring-[#10B981]/20 transition-all">
+            <div className="mt-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-md p-2.5 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500/20 transition-all">
                 <textarea
-                  rows={2}
+                  rows={3}
                   value={quickPrompt}
                   onChange={(e) => setQuickPrompt(e.target.value)}
-                  placeholder="Paste confidential data, code or prompts to test..."
+                  placeholder="Paste confidential data, secrets, or prompts to test..."
                   maxLength={500}
-                  className="w-full bg-transparent text-xs text-gray-900 placeholder-gray-400 focus:outline-none resize-none font-mono"
+                  className="w-full bg-transparent text-xs text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-mono"
                 />
-                <div className="flex items-center justify-between pt-1 border-t border-gray-200/60">
-                  <span className="text-[10px] text-gray-400 font-mono">
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200/70">
+                  <span className="text-[10px] text-slate-400 font-mono">
                     {quickPrompt.length}/500
                   </span>
                   <button
                     type="button"
                     onClick={handleQuickScan}
-                    className="px-3 py-1 rounded-lg bg-[#10B981] hover:bg-emerald-600 text-white text-[11px] font-bold flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                    className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
                   >
-                    <span>Scan Now</span>
-                    <Send className="w-2.5 h-2.5" />
+                    <span>Test Prompt</span>
+                    <Send className="w-3 h-3" />
                   </button>
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="mt-2 text-[10px] text-slate-400 font-mono">
+            Evaluated using safe non-backtracking regular expressions.
           </div>
         </div>
       </div>

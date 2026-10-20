@@ -11,6 +11,8 @@ import { toolRepo } from '../../database/repositories/toolRepo';
 import { scanRepo } from '../../database/repositories/scanRepo';
 import { usageRepo } from '../../database/repositories/usageRepo';
 import { reportRepo, settingsRepo } from '../../database/repositories/reportRepo';
+import { incidentRepo } from '../../database/repositories/alertRepo';
+import { getActiveScannerRules } from '../../scanner/scannerEngine';
 import { Policy, SeverityLevel, ReportRecord } from '../../database/types';
 import {
   BALANCED_TEMPLATE,
@@ -989,6 +991,11 @@ export const ReportsPage: React.FC = () => {
       count,
     }));
 
+    const allIncidents = incidentRepo.getAll();
+    const policyRecord = policyRepo.getLatest('pol_data_categories');
+    const activeRulesSummary = getActiveScannerRules(policyRecord?.policy_json, policyRecord?.version);
+    const totalScans = scanRepo.getScanSessions().length;
+
     const reportId = `GOV-${Date.now().toString().slice(-6)}`;
     const data = {
       reportId,
@@ -1003,6 +1010,10 @@ export const ReportsPage: React.FC = () => {
       totalFindings: allFindings.length,
       categoriesDetected,
       riskDistribution: severityCounts,
+      toolList: allTools,
+      incidentList: allIncidents,
+      activeRulesCount: activeRulesSummary.totalCount,
+      totalScansCount: totalScans,
       telemetryLimitations: [
         'Browser Integration: Unsupported in standard browser sandbox without managed agent.',
         'Extension permissions reflect declared capabilities, not confirmed prompt access.',
