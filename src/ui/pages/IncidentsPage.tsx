@@ -143,7 +143,7 @@ export const IncidentsPage: React.FC = () => {
     {
       header: 'Incident ID',
       accessor: (inc) => (
-        <span className="font-mono font-bold text-[#5B4DFB]">
+        <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
           {inc.incident_number}
         </span>
       ),
@@ -154,8 +154,8 @@ export const IncidentsPage: React.FC = () => {
       header: 'Title',
       accessor: (inc) => (
         <div>
-          <div className="font-bold text-gray-900 text-xs">{inc.title}</div>
-          <div className="text-[11px] text-gray-500 line-clamp-1">{inc.summary}</div>
+          <div className="font-bold text-gray-900 dark:text-slate-100 text-xs">{inc.title}</div>
+          <div className="text-[11px] text-gray-500 dark:text-slate-400 line-clamp-1">{inc.summary}</div>
         </div>
       ),
       sortable: true,
@@ -173,10 +173,10 @@ export const IncidentsPage: React.FC = () => {
         <span
           className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
             inc.status === 'Open'
-              ? 'bg-rose-50 text-rose-800 border-rose-300'
+              ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800/80'
               : inc.status === 'Closed'
-              ? 'bg-gray-100 text-gray-700 border-gray-300'
-              : 'bg-amber-50 text-amber-800 border-amber-300'
+              ? 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 border-gray-300 dark:border-slate-600'
+              : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800/80'
           }`}
         >
           {inc.status}
@@ -185,16 +185,20 @@ export const IncidentsPage: React.FC = () => {
     },
     {
       header: 'Target User',
-      accessor: (inc) => inc.username || inc.user_id.slice(0, 8),
+      accessor: (inc) => (
+        <span className="text-gray-800 dark:text-slate-200 font-medium">
+          {inc.username || inc.user_id.slice(0, 8)}
+        </span>
+      ),
     },
     {
       header: 'Assigned',
-      accessor: (inc) => inc.assigned_name ? <span className="font-medium text-gray-800">{inc.assigned_name}</span> : <span className="text-gray-400 italic">Unassigned</span>,
+      accessor: (inc) => inc.assigned_name ? <span className="font-medium text-gray-800 dark:text-slate-200">{inc.assigned_name}</span> : <span className="text-gray-400 dark:text-slate-500 italic">Unassigned</span>,
     },
     {
       header: 'Opened',
       accessor: (inc) => (
-        <span className="font-mono text-[11px] text-gray-500">
+        <span className="font-mono text-[11px] text-gray-500 dark:text-slate-400">
           {new Date(inc.opened_at).toLocaleDateString()}
         </span>
       ),
@@ -207,7 +211,7 @@ export const IncidentsPage: React.FC = () => {
       accessor: (inc) => (
         <button
           onClick={() => handleSelectIncident(inc)}
-          className="px-3 py-1.5 text-xs font-bold text-[#5B4DFB] hover:text-[#4E3EF0] bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200/80 transition-colors cursor-pointer"
+          className="px-3 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-lg border border-indigo-200/80 dark:border-indigo-800 transition-colors cursor-pointer"
         >
           View Dossier &rarr;
         </button>
@@ -217,12 +221,12 @@ export const IncidentsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-slate-800">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-slate-100">
             Security Incidents & Evidence Timeline
           </h1>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 font-medium mt-1">
             Formal investigation cases with strict separation of scan vs attempted vs confirmed transmission evidence
           </p>
         </div>
@@ -233,7 +237,7 @@ export const IncidentsPage: React.FC = () => {
             setNewSummary('');
             setIsCreateModalOpen(true);
           }}
-          className="px-4 py-2 text-xs font-bold text-white bg-[#5B4DFB] hover:bg-[#4E3EF0] rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start cursor-pointer"
+          className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

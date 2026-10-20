@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Eye, EyeOff, AlertCircle, Sparkles, Lock, ArrowRight, Check } from 'lucide-react';
 import { useAuth } from '../../services/authContext';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export const LoginPage: React.FC = () => {
   const { login, setupAdmin, isFirstRun } = useAuth();
@@ -247,16 +248,19 @@ export const LoginPage: React.FC = () => {
       </div>
 
       {/* =========================================================================
-          RIGHT SIDE: PURE WHITE BACKGROUND WITH ULTRA-CLEAN MINIMAL LOGIN FORM
+          RIGHT SIDE: CLEAN MINIMAL LOGIN FORM (Dark/Light responsive)
          ========================================================================= */}
-      <div className="md:w-1/2 bg-white flex flex-col justify-center items-center p-8 sm:p-12 lg:p-20">
+      <div className="md:w-1/2 bg-white dark:bg-slate-900 flex flex-col justify-center items-center p-8 sm:p-12 lg:p-20 relative">
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
         <div className="w-full max-w-md mx-auto">
           {/* Form Header */}
           <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-slate-100 tracking-tight">
               Log In
             </h1>
-            <p className="text-sm text-gray-400 mt-2">
+            <p className="text-sm text-gray-400 dark:text-slate-400 mt-2">
               Enter your email and password to login our dashboard.
             </p>
           </div>
@@ -266,7 +270,7 @@ export const LoginPage: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-3"
+              className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-3"
             >
               <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
               <div className="leading-relaxed font-medium">{error}</div>
@@ -278,7 +282,7 @@ export const LoginPage: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-200 text-purple-800 text-xs leading-relaxed"
+              className="mb-6 p-4 rounded-xl bg-purple-50 dark:bg-indigo-950/50 border border-purple-200 dark:border-indigo-900 text-purple-800 dark:text-indigo-300 text-xs leading-relaxed"
             >
               <div className="font-bold mb-0.5">Airgap Security Mode Active</div>
               Password recovery tokens must be provisioned directly by your Security Administrator.
@@ -291,7 +295,7 @@ export const LoginPage: React.FC = () => {
             <div>
               <label
                 htmlFor="email-input"
-                className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2"
+                className="block text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-2"
               >
                 Email
               </label>
@@ -302,7 +306,7 @@ export const LoginPage: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="info@promptshield.com"
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:border-[#5B4DFB] focus:ring-4 focus:ring-purple-100 transition-all shadow-xs"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-500 text-sm focus:outline-none focus:border-[#5B4DFB] focus:ring-4 focus:ring-purple-100 dark:focus:ring-purple-900/40 transition-all shadow-xs"
               />
             </div>
 
@@ -311,14 +315,14 @@ export const LoginPage: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <label
                   htmlFor="password-input"
-                  className="block text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                  className="block text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wider"
                 >
                   Password
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowForgotNotice(true)}
-                  className="text-xs font-medium text-[#5B4DFB] hover:text-[#4A3EE0] transition-colors cursor-pointer"
+                  className="text-xs font-medium text-[#5B4DFB] dark:text-indigo-400 hover:text-[#4A3EE0] transition-colors cursor-pointer"
                 >
                   Forgot Password?
                 </button>
@@ -332,12 +336,12 @@ export const LoginPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your Password"
-                  className="w-full px-4 py-3 pr-11 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:border-[#5B4DFB] focus:ring-4 focus:ring-purple-100 transition-all shadow-xs"
+                  className="w-full px-4 py-3 pr-11 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-500 text-sm focus:outline-none focus:border-[#5B4DFB] focus:ring-4 focus:ring-purple-100 dark:focus:ring-purple-900/40 transition-all shadow-xs"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1 cursor-pointer"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-200 transition-colors p-1 cursor-pointer"
                   title={showPassword ? 'Hide password' : 'Show password'}
                   aria-label="Toggle password visibility"
                 >
@@ -368,12 +372,12 @@ export const LoginPage: React.FC = () => {
 
             {/* Bottom Links */}
             <div className="text-center pt-4">
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-400 dark:text-slate-500">
                 Don't have an account?{' '}
                 <button
                   type="button"
                   onClick={() => setShowForgotNotice(true)}
-                  className="font-semibold text-[#5B4DFB] hover:underline cursor-pointer"
+                  className="font-semibold text-[#5B4DFB] dark:text-indigo-400 hover:underline cursor-pointer"
                 >
                   Sign Up
                 </button>

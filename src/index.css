@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer utilities {
   @keyframes breatheGlow {
     0%, 100% {
@@ -17,18 +19,24 @@
   }
 }
 
-/* Modern Corporate SaaS Light Scrollbars */
+/* Scrollbars adapting to dark/light theme */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F3F4F6;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D1D5DB;
+  background: #CBD5E1;
   border-radius: 9999px;
 }
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
 ::-webkit-scrollbar-thumb:hover {
-  background: #9CA3AF;
+  background: #94A3B8;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
 }

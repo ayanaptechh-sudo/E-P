@@ -7,76 +7,86 @@ import React, { useState, useMemo } from 'react';
 
 export interface Column<T> {
   header: string;
-  accessor?: keyof T | ((row: T) => React.ReactNode);
+  accessor: keyof T | ((row: T) => React.ReactNode);
   className?: string;
-  align?: 'left' | 'right' | 'center';
   sortable?: boolean;
   sortValue?: (row: T) => string | number;
+  align?: 'left' | 'center' | 'right';
 }
 
-export interface DataTableProps<T> {
+interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
   keyField: keyof T;
   searchPlaceholder?: string;
   searchFilter?: (row: T, query: string) => boolean;
-  pageSize?: number;
+  actions?: React.ReactNode;
   emptyTitle?: string;
   emptySubtitle?: string;
-  actions?: React.ReactNode;
+  pageSize?: number;
 }
 
-export function DataTable<T>({
+export function DataTable<T extends Record<string, unknown>>({
   columns,
   data,
   keyField,
   searchPlaceholder = 'Search records...',
   searchFilter,
-  pageSize = 10,
-  emptyTitle = 'No records found',
-  emptySubtitle = 'There are no items matching the current filter criteria.',
   actions,
+  emptyTitle = 'No records found',
+  emptySubtitle = 'There are no items to display matching your criteria.',
+  pageSize = 10,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const [currentPage, setPage] = useState(1);
   const [sortCol, setSortCol] = useState<number | null>(null);
   const [sortAsc, setSortAsc] = useState(true);
 
+  // Filter
   const filteredData = useMemo(() => {
-    let list = data;
-    if (search.trim() && searchFilter) {
-      const q = search.toLowerCase().trim();
-      list = list.filter(row => searchFilter(row, q));
-    }
-    if (sortCol !== null && columns[sortCol]) {
-      const col = columns[sortCol];
-      list = [...list].sort((a, b) => {
-        let valA: string | number = '';
-        let valB: string | number = '';
-        if (col.sortValue) {
-          valA = col.sortValue(a);
-          valB = col.sortValue(b);
-        } else if (typeof col.accessor === 'string') {
-          valA = (a[col.accessor as keyof T] as unknown as string | number) || '';
-          valB = (b[col.accessor as keyof T] as unknown as string | number) || '';
-        }
-        if (valA < valB) return sortAsc ? -1 : 1;
-        if (valA > valB) return sortAsc ? 1 : -1;
-        return 0;
-      });
-    }
-    return list;
-  }, [data, search, searchFilter, sortCol, sortAsc, columns]);
+    if (!search.trim() || !searchFilter) return data;
+    const q = search.toLowerCase().trim();
+    return data.filter(row => searchFilter(row, q));
+  }, [data, search, searchFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
+  // Sort
+  const sortedData = useMemo(() => {
+    if (sortCol === null) return filteredData;
+    const col = columns[sortCol];
+    if (!col) return filteredData;
+
+    return [...filteredData].sort((a, b) => {
+      let valA: string | number | unknown = '';
+      let valB: string | number | unknown = '';
+
+      if (col.sortValue) {
+        valA = col.sortValue(a);
+        valB = col.sortValue(b);
+      } else if (typeof col.accessor === 'string') {
+        valA = a[col.accessor as keyof T];
+        valB = b[col.accessor as keyof T];
+      }
+
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      }
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortAsc ? valA - valB : valB - valA;
+      }
+      return 0;
+    });
+  }, [filteredData, sortCol, sortAsc, columns]);
+
+  // Paginate
+  const totalPages = Math.ceil(sortedData.length / pageSize) || 1;
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return filteredData.slice(start, start + pageSize);
-  }, [filteredData, currentPage, pageSize]);
+    return sortedData.slice(start, start + pageSize);
+  }, [sortedData, currentPage, pageSize]);
 
   const handleHeaderClick = (index: number) => {
-    if (!columns[index].sortable && !columns[index].sortValue) return;
+    const col = columns[index];
+    if (!col.sortable && !col.sortValue) return;
     if (sortCol === index) {
       setSortAsc(!sortAsc);
     } else {
@@ -86,9 +96,9 @@ export function DataTable<T>({
   };
 
   return (
-    <div className="bg-white border border-gray-200/80 rounded-2xl overflow-hidden shadow-xs">
+    <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xs">
       {(searchFilter || actions) && (
-        <div className="p-4 border-b border-gray-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 border-b border-gray-200/80 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {searchFilter ? (
             <div className="relative max-w-sm w-full">
               <input
@@ -99,10 +109,10 @@ export function DataTable<T>({
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-900 placeholder-gray-400 font-medium transition-all"
+                className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 font-medium transition-all"
               />
               <svg
-                className="w-4 h-4 text-gray-400 absolute left-2.5 top-2.5"
+                className="w-4 h-4 text-gray-400 dark:text-slate-500 absolute left-2.5 top-2.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -118,23 +128,23 @@ export function DataTable<T>({
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="bg-gray-50/80 text-gray-700 font-bold border-b border-gray-200/80">
+            <tr className="bg-gray-50/80 dark:bg-slate-900/60 text-gray-700 dark:text-slate-300 font-bold border-b border-gray-200/80 dark:border-slate-700">
               {columns.map((col, idx) => {
                 const isSortable = col.sortable || !!col.sortValue;
                 return (
                   <th
                     key={idx}
                     onClick={() => handleHeaderClick(idx)}
-                    className={`py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-gray-700 ${
+                    className={`py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-gray-700 dark:text-slate-300 ${
                       col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
-                    } ${isSortable ? 'cursor-pointer select-none hover:text-gray-900' : ''} ${
+                    } ${isSortable ? 'cursor-pointer select-none hover:text-gray-900 dark:hover:text-white' : ''} ${
                       col.className || ''
                     }`}
                   >
                     <div className={`inline-flex items-center gap-1 ${col.align === 'right' ? 'justify-end' : ''}`}>
                       <span>{col.header}</span>
                       {sortCol === idx && (
-                        <span className="text-[#5B4DFB] font-mono text-xs font-bold">
+                        <span className="text-[#5B4DFB] dark:text-indigo-400 font-mono text-xs font-bold">
                           {sortAsc ? '↑' : '↓'}
                         </span>
                       )}
@@ -144,13 +154,13 @@ export function DataTable<T>({
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 text-gray-800">
+          <tbody className="divide-y divide-gray-100 dark:divide-slate-700/60 text-gray-800 dark:text-slate-200">
             {paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="py-12 text-center">
                   <div className="max-w-xs mx-auto">
-                    <p className="text-sm font-bold text-gray-900">{emptyTitle}</p>
-                    <p className="text-xs text-gray-500 mt-1">{emptySubtitle}</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-slate-100">{emptyTitle}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">{emptySubtitle}</p>
                   </div>
                 </td>
               </tr>
@@ -158,7 +168,7 @@ export function DataTable<T>({
               paginatedData.map(row => (
                 <tr
                   key={String(row[keyField])}
-                  className="hover:bg-gray-50/70 transition-colors"
+                  className="hover:bg-gray-50/70 dark:hover:bg-slate-700/40 transition-colors"
                 >
                   {columns.map((col, colIdx) => {
                     let cellContent: React.ReactNode = null;
@@ -186,27 +196,27 @@ export function DataTable<T>({
       </div>
 
       {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-gray-200/80 flex items-center justify-between text-xs text-gray-600 bg-gray-50/30">
+        <div className="px-4 py-3 border-t border-gray-200/80 dark:border-slate-700 flex items-center justify-between text-xs text-gray-600 dark:text-slate-400 bg-gray-50/30 dark:bg-slate-900/30">
           <span>
-            Showing <strong className="text-gray-900 font-bold tabular-nums">{(currentPage - 1) * pageSize + 1}</strong> to{' '}
-            <strong className="text-gray-900 font-bold tabular-nums">{Math.min(currentPage * pageSize, filteredData.length)}</strong> of{' '}
-            <strong className="text-gray-900 font-bold tabular-nums">{filteredData.length}</strong> records
+            Showing <strong className="text-gray-900 dark:text-slate-100 font-bold tabular-nums">{(currentPage - 1) * pageSize + 1}</strong> to{' '}
+            <strong className="text-gray-900 dark:text-slate-100 font-bold tabular-nums">{Math.min(currentPage * pageSize, filteredData.length)}</strong> of{' '}
+            <strong className="text-gray-900 dark:text-slate-100 font-bold tabular-nums">{filteredData.length}</strong> records
           </span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1.5 rounded-lg border border-gray-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white text-gray-700 shadow-2xs transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer"
             >
               Previous
             </button>
-            <span className="px-2 font-mono tabular-nums text-gray-600 font-medium">
+            <span className="px-2 font-mono tabular-nums text-gray-600 dark:text-slate-400 font-medium">
               {currentPage} / {totalPages}
             </span>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1.5 rounded-lg border border-gray-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white text-gray-700 shadow-2xs transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer"
             >
               Next
             </button>
@@ -237,19 +247,19 @@ export const Modal: React.FC<{
       : 'max-w-lg';
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-900/50 dark:bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
       <div
-        className={`bg-white border border-gray-200 rounded-2xl shadow-xl w-full ${maxWidthClass} overflow-hidden`}
+        className={`bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-xl w-full ${maxWidthClass} overflow-hidden`}
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-gray-150 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-gray-150 dark:border-slate-700 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-gray-900">{title}</h3>
-            {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+            <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">{title}</h3>
+            {subtitle && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+            className="text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

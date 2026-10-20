@@ -156,25 +156,25 @@ export const ScanTextPage: React.FC<{
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-slate-800">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-slate-100">
             Local Prompt & Data Scanner
           </h1>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 font-medium mt-1">
             Evaluate text payloads against local DLP patterns before sending to external AI models
           </p>
         </div>
 
         {/* Destination Tool Selector */}
         <div className="flex items-center gap-2.5">
-          <label className="text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">
+          <label className="text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">
             Target AI:
           </label>
           <select
             value={targetToolId}
             onChange={(e) => setTargetToolId(e.target.value)}
-            className="px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-900 font-semibold shadow-2xs"
+            className="px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-900 dark:text-slate-100 font-semibold shadow-2xs"
           >
             <option value="">Unspecified / General AI Tool</option>
             {tools.map((t) => (
@@ -200,12 +200,12 @@ export const ScanTextPage: React.FC<{
       ) : (
         <>
           {/* Text Area Box */}
-          <div className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-xs">
+          <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-2xl p-6 shadow-xs">
             <div className="flex items-center justify-between mb-2.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-gray-700">
+              <label className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
                 Prompt Payload or Code Fragment
               </label>
-              <div className="flex items-center gap-3 text-xs text-gray-500 font-mono font-medium">
+              <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-slate-400 font-mono font-medium">
                 <span>{text.length} characters</span>
                 <span>•</span>
                 <span>{text.split(/\s+/).filter(Boolean).length} words</span>
@@ -217,11 +217,11 @@ export const ScanTextPage: React.FC<{
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Paste text, code snippets, database queries, configurations, or credentials here to scan for sensitive exposure..."
-              className="w-full p-4 font-mono text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-900 placeholder-gray-400 leading-relaxed transition-all"
+              className="w-full p-4 font-mono text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 leading-relaxed transition-all"
             />
 
             <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-              <span className="text-[11px] text-gray-500 font-medium">
+              <span className="text-[11px] text-gray-500 dark:text-slate-400 font-medium">
                 Luhn checksum filter for cards · Pakistani CNIC & National IDs · Known API keys & PEM · Password assignments
               </span>
 
@@ -231,7 +231,7 @@ export const ScanTextPage: React.FC<{
                     type="button"
                     onClick={handleClear}
                     disabled={!text && !scanResult}
-                    className="px-3.5 py-2 text-xs font-semibold text-gray-700 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-40 cursor-pointer"
+                    className="px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-xl transition-colors disabled:opacity-40 cursor-pointer"
                   >
                     Clear
                   </button>
@@ -239,7 +239,7 @@ export const ScanTextPage: React.FC<{
                     type="button"
                     onClick={handleScan}
                     disabled={!text.trim() || isScanning}
-                    className="px-5 py-2 text-xs font-bold text-white bg-[#5B4DFB] hover:bg-[#4E3EF0] rounded-xl shadow-xs transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                    className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                   >
                     {isScanning ? (
                       <>
@@ -256,7 +256,7 @@ export const ScanTextPage: React.FC<{
                     )}
                   </button>
                 </div>
-                <span className="text-[11px] text-gray-400 font-mono">
+                <span className="text-[11px] text-gray-400 dark:text-slate-500 font-mono">
                   Active rules: {activeRulesSummary.totalCount} (policy v{activeRulesSummary.policyVersion}, rules v{activeRulesSummary.rulesVersion})
                 </span>
               </div>
@@ -320,11 +320,11 @@ export const ScanClipboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="pb-4 border-b border-gray-200">
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">
+      <div className="pb-4 border-b border-gray-200 dark:border-slate-800">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-slate-100">
           Scan Clipboard Safeguard
         </h1>
-        <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">
+        <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 font-medium mt-1">
           Explicit user-initiated clipboard inspection. Zero background polling or keylogging.
         </p>
       </div>
@@ -332,21 +332,21 @@ export const ScanClipboardPage: React.FC = () => {
       <PrivacyBanner />
 
       {!clipboardText ? (
-        <div className="bg-white border border-gray-200/80 rounded-2xl p-10 text-center shadow-xs">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-indigo-50 border border-indigo-200/60 flex items-center justify-center text-[#5B4DFB] shadow-xs">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-2xl p-10 text-center shadow-xs">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-xs">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
           </div>
-          <h3 className="text-lg font-extrabold text-gray-900">
+          <h3 className="text-lg font-extrabold text-gray-900 dark:text-slate-100">
             Inspect Clipboard for Sensitive Leakage
           </h3>
-          <p className="text-xs sm:text-sm text-gray-500 max-w-lg mx-auto mt-1.5 mb-6 leading-relaxed">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 max-w-lg mx-auto mt-1.5 mb-6 leading-relaxed">
             Clicking the button reads your active OS clipboard buffer once into local browser memory to scan for API keys, passwords, and IDs before pasting into external AI tools.
           </p>
 
           {errorMessage && (
-            <div className="max-w-md mx-auto mb-6 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-medium text-left">
+            <div className="max-w-md mx-auto mb-6 p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 rounded-xl text-xs text-amber-900 dark:text-amber-200 font-medium text-left">
               {errorMessage}
             </div>
           )}
@@ -355,7 +355,7 @@ export const ScanClipboardPage: React.FC = () => {
             <button
               onClick={handleReadAndScan}
               disabled={isReading}
-              className="px-6 py-3 text-xs font-bold text-white bg-[#5B4DFB] hover:bg-[#4E3EF0] rounded-xl shadow-xs transition-colors disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer"
+              className="px-6 py-3 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer"
             >
               {isReading ? (
                 <span>Reading Clipboard...</span>
@@ -368,7 +368,7 @@ export const ScanClipboardPage: React.FC = () => {
                 </>
               )}
             </button>
-            <span className="text-[11px] text-gray-400 font-mono">
+            <span className="text-[11px] text-gray-400 dark:text-slate-500 font-mono">
               Active rules: {activeRulesSummary.totalCount} (policy v{activeRulesSummary.policyVersion}, rules v{activeRulesSummary.rulesVersion})
             </span>
           </div>
