@@ -398,24 +398,24 @@ export const PolicyPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-slate-800">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-slate-100">
             Security Policy & Rule Governance
           </h1>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 font-medium mt-1">
             Immutable multi-version policies, ReDoS-safe DLP regex rules, and alert thresholds
           </p>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-gray-100 rounded-xl self-start">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-gray-100 dark:bg-slate-900 rounded-xl self-start">
           <button
             onClick={() => setActiveTab('categories')}
             className={`px-3.5 py-1.5 text-xs rounded-lg transition-all cursor-pointer ${
               activeTab === 'categories'
-                ? 'bg-white text-gray-900 shadow-xs font-bold'
-                : 'text-gray-600 hover:text-gray-900 font-medium'
+                ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-xs font-bold'
+                : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 font-medium'
             }`}
           >
             Scanner Rules ({rulesList.length})
@@ -424,8 +424,8 @@ export const PolicyPage: React.FC = () => {
             onClick={() => setActiveTab('templates')}
             className={`px-3.5 py-1.5 text-xs rounded-lg transition-all cursor-pointer ${
               activeTab === 'templates'
-                ? 'bg-white text-gray-900 shadow-xs font-bold'
-                : 'text-gray-600 hover:text-gray-900 font-medium'
+                ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-xs font-bold'
+                : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 font-medium'
             }`}
           >
             Templates
@@ -434,8 +434,8 @@ export const PolicyPage: React.FC = () => {
             onClick={() => setActiveTab('thresholds')}
             className={`px-3.5 py-1.5 text-xs rounded-lg transition-all cursor-pointer ${
               activeTab === 'thresholds'
-                ? 'bg-white text-gray-900 shadow-xs font-bold'
-                : 'text-gray-600 hover:text-gray-900 font-medium'
+                ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-xs font-bold'
+                : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 font-medium'
             }`}
           >
             Alert Thresholds
@@ -444,8 +444,8 @@ export const PolicyPage: React.FC = () => {
             onClick={() => setActiveTab('retention')}
             className={`px-3.5 py-1.5 text-xs rounded-lg transition-all cursor-pointer ${
               activeTab === 'retention'
-                ? 'bg-white text-gray-900 shadow-xs font-bold'
-                : 'text-gray-600 hover:text-gray-900 font-medium'
+                ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-xs font-bold'
+                : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 font-medium'
             }`}
           >
             Retention
@@ -454,8 +454,8 @@ export const PolicyPage: React.FC = () => {
             onClick={() => setActiveTab('keywords')}
             className={`px-3.5 py-1.5 text-xs rounded-lg transition-all cursor-pointer ${
               activeTab === 'keywords'
-                ? 'bg-white text-gray-900 shadow-xs font-bold'
-                : 'text-gray-600 hover:text-gray-900 font-medium'
+                ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-xs font-bold'
+                : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 font-medium'
             }`}
           >
             Keywords & Placeholders
@@ -464,7 +464,7 @@ export const PolicyPage: React.FC = () => {
       </div>
 
       {successNotice && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800">
+        <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-semibold text-emerald-800 dark:text-emerald-300">
           {successNotice}
         </div>
       )}
@@ -473,8 +473,8 @@ export const PolicyPage: React.FC = () => {
       {activeTab === 'categories' && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="text-xs text-gray-500 font-medium">
-              Active Version: <strong className="text-gray-900">v{dataPolicy?.version || 1}</strong> &bull; Updated by <strong className="text-gray-900">{dataPolicy?.updated_by}</strong> on {new Date(dataPolicy?.updated_at || Date.now()).toLocaleDateString()}
+            <div className="text-xs text-gray-500 dark:text-slate-400 font-medium">
+              Active Version: <strong className="text-gray-900 dark:text-slate-100">v{dataPolicy?.version || 1}</strong> &bull; Updated by <strong className="text-gray-900 dark:text-slate-100">{dataPolicy?.updated_by}</strong> on {new Date(dataPolicy?.updated_at || Date.now()).toLocaleDateString()}
             </div>
             <button
               onClick={openAddRuleModal}
@@ -487,10 +487,10 @@ export const PolicyPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="bg-white border border-gray-200/80 rounded-2xl overflow-hidden shadow-xs">
+          <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xs">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="bg-gray-50/80 text-gray-700 font-bold border-b border-gray-200/80">
+                <tr className="bg-gray-50/80 dark:bg-slate-900/60 text-gray-700 dark:text-slate-300 font-bold border-b border-gray-200/80 dark:border-slate-700">
                   <th className="py-3 px-4 font-bold">Rule ID</th>
                   <th className="py-3 px-4 font-bold">Category</th>
                   <th className="py-3 px-4 font-bold">Severity</th>
@@ -499,14 +499,14 @@ export const PolicyPage: React.FC = () => {
                   <th className="py-3 px-4 font-bold text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-gray-800">
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700/60 text-gray-800 dark:text-slate-200">
                 {Array.isArray(rulesList) && rulesList.length > 0 ? (
                   rulesList.map((r, idx) => (
-                    <tr key={r.rule_id} className="hover:bg-gray-50/70 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-[#5B4DFB]">
+                    <tr key={r.rule_id} className="hover:bg-gray-50/70 dark:hover:bg-slate-700/40 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-[#5B4DFB] dark:text-indigo-400">
                         {r.rule_id}
                       </td>
-                      <td className="py-3 px-4 font-bold text-gray-900">
+                      <td className="py-3 px-4 font-bold text-gray-900 dark:text-slate-100">
                         {r.category}
                       </td>
                       <td className="py-3 px-4">
@@ -517,8 +517,8 @@ export const PolicyPage: React.FC = () => {
                           onClick={() => handleToggleRule(idx)}
                           className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold cursor-pointer transition-colors ${
                             r.enabled
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                              : 'bg-gray-100 text-gray-500 border border-gray-200'
+                              ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80'
+                              : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 border border-gray-200 dark:border-slate-600'
                           }`}
                         >
                           {r.enabled ? 'Enabled' : 'Disabled'}
@@ -526,8 +526,8 @@ export const PolicyPage: React.FC = () => {
                       </td>
                       <td className="py-3 px-4 font-mono text-[11px] max-w-xs">
                         <div className="flex items-center gap-1.5 truncate">
-                          <span className="text-gray-700 font-medium truncate">{r.regex}</span>
-                          <span className="shrink-0 px-1.5 py-0.5 rounded bg-gray-100 text-[10px] text-indigo-700 font-mono font-bold">
+                          <span className="text-gray-700 dark:text-slate-300 font-medium truncate">{r.regex}</span>
+                          <span className="shrink-0 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-[10px] text-indigo-700 dark:text-indigo-300 font-mono font-bold">
                             /{r.flags || 'g'}
                           </span>
                         </div>
@@ -536,13 +536,13 @@ export const PolicyPage: React.FC = () => {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => openEditRuleModal(r, idx)}
-                            className="text-xs text-[#5B4DFB] hover:underline font-bold cursor-pointer"
+                            className="text-xs text-[#5B4DFB] dark:text-indigo-400 hover:underline font-bold cursor-pointer"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteRule(idx)}
-                            className="text-xs text-rose-600 hover:underline font-bold ml-2 cursor-pointer"
+                            className="text-xs text-rose-600 dark:text-rose-400 hover:underline font-bold ml-2 cursor-pointer"
                           >
                             Delete
                           </button>
@@ -552,7 +552,7 @@ export const PolicyPage: React.FC = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-gray-400 font-medium">
+                    <td colSpan={6} className="py-8 text-center text-gray-400 dark:text-slate-500 font-medium">
                       No custom scanner rules configured.
                     </td>
                   </tr>
@@ -566,18 +566,18 @@ export const PolicyPage: React.FC = () => {
       {/* Tab: Templates */}
       {activeTab === 'templates' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-xs flex flex-col justify-between hover:border-gray-300 transition-colors">
+          <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-2xl p-6 shadow-xs flex flex-col justify-between hover:border-gray-300 dark:hover:border-slate-600 transition-colors">
             <div>
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-900 text-base">{BALANCED_TEMPLATE.name}</h3>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                <h3 className="font-bold text-gray-900 dark:text-slate-100 text-base">{BALANCED_TEMPLATE.name}</h3>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                   Recommended
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-2 leading-relaxed font-medium">
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-2 leading-relaxed font-medium">
                 {BALANCED_TEMPLATE.description}
               </p>
-              <div className="mt-4 space-y-2 text-xs text-gray-700 font-medium">
+              <div className="mt-4 space-y-2 text-xs text-gray-700 dark:text-slate-300 font-medium">
                 <div>&bull; Alert on High and Critical findings</div>
                 <div>&bull; Default unreviewed tool status</div>
                 <div>&bull; 90-day event retention schedule</div>
@@ -591,18 +591,18 @@ export const PolicyPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-xs flex flex-col justify-between hover:border-gray-300 transition-colors">
+          <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-2xl p-6 shadow-xs flex flex-col justify-between hover:border-gray-300 dark:hover:border-slate-600 transition-colors">
             <div>
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-900 text-base">{STRICT_TEMPLATE.name}</h3>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                <h3 className="font-bold text-gray-900 dark:text-slate-100 text-base">{STRICT_TEMPLATE.name}</h3>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
                   High Defense
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-2 leading-relaxed font-medium">
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-2 leading-relaxed font-medium">
                 {STRICT_TEMPLATE.description}
               </p>
-              <div className="mt-4 space-y-2 text-xs text-gray-700 font-medium">
+              <div className="mt-4 space-y-2 text-xs text-gray-700 dark:text-slate-300 font-medium">
                 <div>&bull; Alert on Medium, High, and Critical findings</div>
                 <div>&bull; Default restricted tool status</div>
                 <div>&bull; 180-day event retention schedule</div>
@@ -610,24 +610,24 @@ export const PolicyPage: React.FC = () => {
             </div>
             <button
               onClick={() => handleApplyTemplate(STRICT_TEMPLATE)}
-              className="mt-6 w-full py-2.5 text-xs font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-xl shadow-xs transition-colors cursor-pointer"
+              className="mt-6 w-full py-2.5 text-xs font-bold text-white bg-gray-900 dark:bg-indigo-600 hover:bg-gray-800 dark:hover:bg-indigo-700 rounded-xl shadow-xs transition-colors cursor-pointer"
             >
               Apply Strict Template
             </button>
           </div>
 
-          <div className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-xs flex flex-col justify-between hover:border-gray-300 transition-colors">
+          <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-2xl p-6 shadow-xs flex flex-col justify-between hover:border-gray-300 dark:hover:border-slate-600 transition-colors">
             <div>
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-900 text-base">{EDUCATION_TEMPLATE.name}</h3>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                <h3 className="font-bold text-gray-900 dark:text-slate-100 text-base">{EDUCATION_TEMPLATE.name}</h3>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                   Permissive
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-2 leading-relaxed font-medium">
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-2 leading-relaxed font-medium">
                 {EDUCATION_TEMPLATE.description}
               </p>
-              <div className="mt-4 space-y-2 text-xs text-gray-700 font-medium">
+              <div className="mt-4 space-y-2 text-xs text-gray-700 dark:text-slate-300 font-medium">
                 <div>&bull; Alert on Critical secrets and cards only</div>
                 <div>&bull; Permissive default tool classification</div>
                 <div>&bull; 30-day lightweight retention schedule</div>
@@ -635,7 +635,7 @@ export const PolicyPage: React.FC = () => {
             </div>
             <button
               onClick={() => handleApplyTemplate(EDUCATION_TEMPLATE)}
-              className="mt-6 w-full py-2.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+              className="mt-6 w-full py-2.5 text-xs font-bold text-gray-700 dark:text-slate-200 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-xl transition-colors cursor-pointer"
             >
               Apply Education Template
             </button>
@@ -645,38 +645,38 @@ export const PolicyPage: React.FC = () => {
 
       {/* Tab: Alert Thresholds */}
       {activeTab === 'thresholds' && (
-        <div className="bg-white border border-gray-200/80 rounded-2xl p-6 sm:p-8 shadow-xs max-w-xl">
-          <h3 className="text-base font-bold text-gray-900 mb-1">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-2xl p-6 sm:p-8 shadow-xs max-w-xl">
+          <h3 className="text-base font-bold text-gray-900 dark:text-slate-100 mb-1">
             Automated Alert Generation Criteria
           </h3>
-          <p className="text-xs text-gray-500 mb-6 font-medium">
+          <p className="text-xs text-gray-500 dark:text-slate-400 mb-6 font-medium">
             Controls which findings and risk scores spawn immediate alert records.
           </p>
 
           <div className="space-y-4 text-xs">
             <div>
-              <label className="block font-bold uppercase tracking-wider text-gray-700 mb-1">
+              <label className="block font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300 mb-1">
                 Minimum Finding Severity for Alert
               </label>
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 font-mono font-bold text-gray-900">
+              <div className="p-3 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 font-mono font-bold text-gray-900 dark:text-slate-100">
                 {alertThresholdConfig.minSeverityForAlert}
               </div>
             </div>
 
             <div>
-              <label className="block font-bold uppercase tracking-wider text-gray-700 mb-1">
+              <label className="block font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300 mb-1">
                 Minimum User Risk Score for Alert
               </label>
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 font-mono font-bold text-gray-900">
+              <div className="p-3 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 font-mono font-bold text-gray-900 dark:text-slate-100">
                 {alertThresholdConfig.minRiskScoreForAlert}/100
               </div>
             </div>
 
             <div>
-              <label className="block font-bold uppercase tracking-wider text-gray-700 mb-1">
+              <label className="block font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300 mb-1">
                 Auto-Escalate Critical Violations to Open Incident
               </label>
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 font-bold text-gray-900">
+              <div className="p-3 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 font-bold text-gray-900 dark:text-slate-100">
                 {alertThresholdConfig.autoEscalateCritical ? 'Enabled' : 'Disabled'}
               </div>
             </div>
@@ -686,30 +686,30 @@ export const PolicyPage: React.FC = () => {
 
       {/* Tab: Retention Schedule */}
       {activeTab === 'retention' && (
-        <div className="bg-white border border-gray-200/80 rounded-2xl p-6 sm:p-8 shadow-xs max-w-xl">
-          <h3 className="text-base font-bold text-gray-900 mb-1">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-2xl p-6 sm:p-8 shadow-xs max-w-xl">
+          <h3 className="text-base font-bold text-gray-900 dark:text-slate-100 mb-1">
             Data Retention & Purge Configuration
           </h3>
-          <p className="text-xs text-gray-500 mb-6 font-medium">
+          <p className="text-xs text-gray-500 dark:text-slate-400 mb-6 font-medium">
             Configured lifecycle schedules for stored events, scans, and audit traces.
           </p>
 
           <div className="space-y-3 text-xs">
-            <div className="flex justify-between items-center p-3.5 bg-gray-50 rounded-xl border border-gray-200 text-gray-800">
-              <span className="font-medium">Usage Telemetry Events Retention:</span>
-              <strong className="font-mono font-bold text-gray-900">{retentionConfig.eventRetentionDays} Days</strong>
+            <div className="flex justify-between items-center p-3.5 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-slate-200">
+              <span className="font-medium text-gray-600 dark:text-slate-400">Usage Telemetry Events Retention:</span>
+              <strong className="font-mono font-bold text-gray-900 dark:text-slate-100">{retentionConfig.eventRetentionDays} Days</strong>
             </div>
-            <div className="flex justify-between items-center p-3.5 bg-gray-50 rounded-xl border border-gray-200 text-gray-800">
-              <span className="font-medium">DLP Scans & Findings Retention:</span>
-              <strong className="font-mono font-bold text-gray-900">{retentionConfig.findingRetentionDays} Days</strong>
+            <div className="flex justify-between items-center p-3.5 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-slate-200">
+              <span className="font-medium text-gray-600 dark:text-slate-400">DLP Scans & Findings Retention:</span>
+              <strong className="font-mono font-bold text-gray-900 dark:text-slate-100">{retentionConfig.findingRetentionDays} Days</strong>
             </div>
-            <div className="flex justify-between items-center p-3.5 bg-gray-50 rounded-xl border border-gray-200 text-gray-800">
-              <span className="font-medium">Security Audit Logs Retention:</span>
-              <strong className="font-mono font-bold text-gray-900">{retentionConfig.auditLogRetentionDays} Days</strong>
+            <div className="flex justify-between items-center p-3.5 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-slate-200">
+              <span className="font-medium text-gray-600 dark:text-slate-400">Security Audit Logs Retention:</span>
+              <strong className="font-mono font-bold text-gray-900 dark:text-slate-100">{retentionConfig.auditLogRetentionDays} Days</strong>
             </div>
-            <div className="flex justify-between items-center p-3.5 bg-gray-50 rounded-xl border border-gray-200 text-gray-800">
-              <span className="font-medium">Compliance Reports Retention:</span>
-              <strong className="font-mono font-bold text-gray-900">{retentionConfig.reportRetentionDays} Days</strong>
+            <div className="flex justify-between items-center p-3.5 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-slate-200">
+              <span className="font-medium text-gray-600 dark:text-slate-400">Compliance Reports Retention:</span>
+              <strong className="font-mono font-bold text-gray-900 dark:text-slate-100">{retentionConfig.reportRetentionDays} Days</strong>
             </div>
           </div>
         </div>
@@ -717,92 +717,92 @@ export const PolicyPage: React.FC = () => {
 
       {/* Tab: Keywords & Placeholders */}
       {activeTab === 'keywords' && (
-        <div className="bg-white border border-gray-200/80 rounded-2xl p-6 sm:p-8 shadow-xs max-w-3xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-150">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-2xl p-6 sm:p-8 shadow-xs max-w-3xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-150 dark:border-slate-700">
             <div>
-              <h3 className="text-base font-bold text-gray-900">
+              <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">
                 Proximity Dictionaries & Exclusions
               </h3>
-              <p className="text-xs text-gray-500 mt-0.5 font-medium">
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 font-medium">
                 Configure credential triggers, romanized/Hinglish phrasing, and placeholder exclusions.
               </p>
             </div>
             <button
               type="button"
               onClick={handleResetKeywordsToDefault}
-              className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-slate-200 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-xl transition-colors cursor-pointer"
             >
               Reset to Factory Defaults
             </button>
           </div>
 
           {keywordsSavedMsg && (
-            <div className="mb-4 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800">
+            <div className="mb-4 p-3.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-semibold text-emerald-800 dark:text-emerald-300">
               {keywordsSavedMsg}
             </div>
           )}
 
           <form onSubmit={handleSaveKeywords} className="space-y-6">
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Extra Credential Keywords (Comma-Separated)
               </label>
-              <p className="text-[11px] text-gray-500 mb-2">
+              <p className="text-[11px] text-gray-500 dark:text-slate-400 mb-2">
                 Custom organization-specific credential keywords supplied directly to context detection (e.g. internal_key, project_token, vault_secret). Default is empty.
               </p>
               <textarea
                 value={extraKeywordsInput}
                 onChange={(e) => setExtraKeywordsInput(e.target.value)}
                 rows={2}
-                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 placeholder="internal_token, project_auth, client_vault..."
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Credential Trigger Keywords (Comma-Separated)
               </label>
-              <p className="text-[11px] text-gray-500 mb-2">
+              <p className="text-[11px] text-gray-500 dark:text-slate-400 mb-2">
                 Triggers candidate token inspection when positioned within 60 characters before or after on the same line or sentence.
               </p>
               <textarea
                 value={credKeywordsInput}
                 onChange={(e) => setCredKeywordsInput(e.target.value)}
                 rows={3}
-                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 placeholder="api key, apikey, password, token, secret..."
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Hinglish / Romanized Phrasing Keywords (Comma-Separated)
               </label>
-              <p className="text-[11px] text-gray-500 mb-2">
+              <p className="text-[11px] text-gray-500 dark:text-slate-400 mb-2">
                 Romanized Hindi/Urdu context words (e.g. "meri api key ye hai", "password hai", "token ye raha").
               </p>
               <textarea
                 value={hinglishInput}
                 onChange={(e) => setHinglishInput(e.target.value)}
                 rows={2}
-                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 placeholder="meri, mera, mere, ye, yeh, hai, raha, hoga..."
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Known Dummy Placeholders & Exclusions (Exact Match Only)
               </label>
-              <p className="text-[11px] text-gray-500 mb-2">
+              <p className="text-[11px] text-gray-500 dark:text-slate-400 mb-2">
                 Exact values matching these tokens are never flagged or reported (substring matches like "sk-test1234" are always retained).
               </p>
               <textarea
                 value={placeholdersInput}
                 onChange={(e) => setPlaceholdersInput(e.target.value)}
                 rows={3}
-                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 placeholder="changeme, your_api_key, example, test123, <api_key>..."
               />
             </div>
@@ -818,7 +818,6 @@ export const PolicyPage: React.FC = () => {
           </form>
         </div>
       )}
-
       {/* Add / Edit Rule Modal */}
       <Modal
         isOpen={isRuleModalOpen}
@@ -828,13 +827,13 @@ export const PolicyPage: React.FC = () => {
       >
         <form onSubmit={handleSaveRule} className="space-y-4">
           {ruleError && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-800">
+            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-xl text-xs font-semibold text-rose-800 dark:text-rose-300">
               {ruleError}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
               Rule Identifier
             </label>
             <input
@@ -843,13 +842,13 @@ export const PolicyPage: React.FC = () => {
               value={ruleId}
               onChange={(e) => setRuleId(e.target.value)}
               placeholder="e.g. rule_project_code"
-              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl font-mono text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl font-mono text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
                 Category Name
               </label>
               <input
@@ -858,18 +857,18 @@ export const PolicyPage: React.FC = () => {
                 value={ruleCategory}
                 onChange={(e) => setRuleCategory(e.target.value)}
                 placeholder="e.g. Internal Project Code"
-                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium"
+                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
                 Severity Level
               </label>
               <select
                 value={ruleSeverity}
                 onChange={(e) => setRuleSeverity(e.target.value as SeverityLevel)}
-                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:outline-none font-semibold"
+                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none font-semibold"
               >
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
@@ -881,7 +880,7 @@ export const PolicyPage: React.FC = () => {
 
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
                 Regular Expression Pattern
               </label>
               <input
@@ -890,11 +889,11 @@ export const PolicyPage: React.FC = () => {
                 value={ruleRegex}
                 onChange={(e) => setRuleRegex(e.target.value)}
                 placeholder="e.g. \\bPROJ-[A-Z0-9]{6}\\b"
-                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl font-mono text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl font-mono text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
                 Regex Flags
               </label>
               <input
@@ -902,16 +901,16 @@ export const PolicyPage: React.FC = () => {
                 value={ruleFlags}
                 onChange={(e) => setRuleFlags(e.target.value)}
                 placeholder="e.g. g, gi, gim"
-                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl font-mono text-gray-900 focus:bg-white focus:outline-none"
+                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl font-mono text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
               />
-              <span className="text-[10px] text-gray-400 mt-1 block">
+              <span className="text-[10px] text-gray-400 dark:text-slate-500 mt-1 block">
                 Flag "g" is always enforced.
               </span>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
               Explanation (Metadata displayed to user upon match)
             </label>
             <input
@@ -920,12 +919,12 @@ export const PolicyPage: React.FC = () => {
               value={ruleExplanation}
               onChange={(e) => setRuleExplanation(e.target.value)}
               placeholder="e.g. Detected classified internal project identifier."
-              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:outline-none font-medium"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
               False Positive Note
             </label>
             <input
@@ -933,15 +932,15 @@ export const PolicyPage: React.FC = () => {
               value={ruleFalsePositiveNote}
               onChange={(e) => setRuleFalsePositiveNote(e.target.value)}
               placeholder="e.g. Public issue trackers or standard tickets."
-              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:outline-none font-medium"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none font-medium"
             />
           </div>
 
-          <div className="pt-3 flex justify-end gap-2 border-t border-gray-150">
+          <div className="pt-3 flex justify-end gap-2 border-t border-gray-150 dark:border-slate-700">
             <button
               type="button"
               onClick={() => setIsRuleModalOpen(false)}
-              className="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -1052,12 +1051,12 @@ export const ReportsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-slate-800">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-slate-100">
             Compliance & Incident Reports
           </h1>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 font-medium mt-1">
             Cryptographically hashed (SHA-256) executive compliance exports. 100% devoid of raw secrets or prompt contents.
           </p>
         </div>
@@ -1075,7 +1074,7 @@ export const ReportsPage: React.FC = () => {
             </button>
             <button
               onClick={() => handleGenerateComplianceReport('html')}
-              className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl shadow-2xs transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl shadow-2xs transition-colors cursor-pointer"
             >
               Export HTML
             </button>
@@ -1084,9 +1083,9 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Reports History Table */}
-      <div className="bg-white border border-gray-200/80 rounded-2xl overflow-hidden shadow-xs">
-        <div className="p-4 border-b border-gray-200/80">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">
+      <div className="bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xs">
+        <div className="p-4 border-b border-gray-200/80 dark:border-slate-700">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
             Exported Report Ledger & Cryptographic Registry
           </h3>
         </div>
@@ -1094,7 +1093,7 @@ export const ReportsPage: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="bg-gray-50/80 text-gray-700 font-bold border-b border-gray-200/80">
+              <tr className="bg-gray-50/80 dark:bg-slate-900/60 text-gray-700 dark:text-slate-300 font-bold border-b border-gray-200/80 dark:border-slate-700">
                 <th className="py-3 px-4 font-bold">Report File Name</th>
                 <th className="py-3 px-4 font-bold">Classification Type</th>
                 <th className="py-3 px-4 font-bold">Generated By</th>
@@ -1102,32 +1101,32 @@ export const ReportsPage: React.FC = () => {
                 <th className="py-3 px-4 font-bold">SHA-256 Digest</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 text-gray-800">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-700/60 text-gray-800 dark:text-slate-200">
               {reportRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-gray-400 font-medium">
+                  <td colSpan={5} className="py-10 text-center text-gray-400 dark:text-slate-500 font-medium">
                     No reports exported yet. Click "Export Compliance PDF" above to generate your first audit record.
                   </td>
                 </tr>
               ) : (
                 reportRecords.map((r: any) => (
-                  <tr key={r.report_id} className="hover:bg-gray-50/70 transition-colors">
-                    <td className="py-3 px-4 font-bold text-gray-900 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-[#5B4DFB] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <tr key={r.report_id} className="hover:bg-gray-50/70 dark:hover:bg-slate-700/40 transition-colors">
+                    <td className="py-3 px-4 font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-[#5B4DFB] dark:text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                       <span>{r.file_name}</span>
                     </td>
-                    <td className="py-3 px-4 text-gray-700 font-medium">
+                    <td className="py-3 px-4 text-gray-700 dark:text-slate-300 font-medium">
                       {r.report_type}
                     </td>
-                    <td className="py-3 px-4 font-mono text-[11px] text-gray-600 font-medium">
+                    <td className="py-3 px-4 font-mono text-[11px] text-gray-600 dark:text-slate-400 font-medium">
                       {r.generated_by}
                     </td>
-                    <td className="py-3 px-4 font-mono text-[11px] text-gray-500">
+                    <td className="py-3 px-4 font-mono text-[11px] text-gray-500 dark:text-slate-400">
                       {new Date(r.generated_at).toISOString().replace('T', ' ').slice(0, 19)}
                     </td>
-                    <td className="py-3 px-4 font-mono text-[11px] text-gray-400 max-w-xs truncate" title={r.sha256_hash}>
+                    <td className="py-3 px-4 font-mono text-[11px] text-gray-400 dark:text-slate-500 max-w-xs truncate" title={r.sha256_hash}>
                       {r.sha256_hash.slice(0, 20)}...
                     </td>
                   </tr>

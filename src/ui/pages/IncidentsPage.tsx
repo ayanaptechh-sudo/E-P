@@ -248,22 +248,22 @@ export const IncidentsPage: React.FC = () => {
 
       {/* Incident Detail Drawer / Panel if Selected */}
       {selectedIncident && (
-        <div className="bg-white border border-gray-200/90 rounded-2xl p-6 sm:p-8 shadow-xs mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-150 gap-4">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200/90 dark:border-slate-700 rounded-2xl p-6 sm:p-8 shadow-xs mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-150 dark:border-slate-700 gap-4">
             <div>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-base font-extrabold text-[#5B4DFB]">
+                <span className="font-mono text-base font-extrabold text-[#5B4DFB] dark:text-indigo-400">
                   {selectedIncident.incident_number}
                 </span>
-                <h2 className="text-base font-bold text-gray-900">
+                <h2 className="text-base font-bold text-gray-900 dark:text-slate-100">
                   {selectedIncident.title}
                 </h2>
                 <RiskBadge level={selectedIncident.priority} size="sm" />
               </div>
-              <div className="flex items-center gap-4 text-xs text-gray-500 mt-1 font-medium">
-                <span>User: <strong className="text-gray-800">{selectedIncident.username}</strong></span>
-                <span>Assigned: <strong className="text-gray-800">{selectedIncident.assigned_name || 'Unassigned'}</strong></span>
-                <span>Opened: <strong className="text-gray-800">{new Date(selectedIncident.opened_at).toLocaleDateString()}</strong></span>
+              <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-slate-400 mt-1 font-medium">
+                <span>User: <strong className="text-gray-800 dark:text-slate-200">{selectedIncident.username}</strong></span>
+                <span>Assigned: <strong className="text-gray-800 dark:text-slate-200">{selectedIncident.assigned_name || 'Unassigned'}</strong></span>
+                <span>Opened: <strong className="text-gray-800 dark:text-slate-200">{new Date(selectedIncident.opened_at).toLocaleDateString()}</strong></span>
               </div>
             </div>
 
@@ -271,7 +271,7 @@ export const IncidentsPage: React.FC = () => {
               <select
                 value={selectedIncident.status}
                 onChange={(e) => handleUpdateStatus(e.target.value as IncidentStatus)}
-                className="px-3 py-1.5 text-xs font-bold bg-gray-50 border border-gray-200 rounded-xl text-gray-800 cursor-pointer shadow-2xs"
+                className="px-3 py-1.5 text-xs font-bold bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-800 dark:text-slate-200 cursor-pointer shadow-2xs"
               >
                 <option value="Open">Status: Open</option>
                 <option value="In Progress">Status: In Progress</option>
@@ -281,28 +281,28 @@ export const IncidentsPage: React.FC = () => {
 
               <button
                 onClick={() => setIsAddTimelineModalOpen(true)}
-                className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer shadow-2xs"
+                className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer shadow-2xs"
               >
                 + Add Timeline Event
               </button>
 
               <button
                 onClick={() => handleExportReport('pdf')}
-                className="px-3.5 py-1.5 text-xs font-bold text-[#5B4DFB] bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 text-xs font-bold text-[#5B4DFB] dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors cursor-pointer"
               >
                 Export PDF
               </button>
 
               <button
                 onClick={() => handleExportReport('html')}
-                className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-slate-200 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-xl transition-colors cursor-pointer"
               >
                 Export HTML
               </button>
 
               <button
                 onClick={() => setSelectedIncident(null)}
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+                className="p-1.5 text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -312,21 +312,21 @@ export const IncidentsPage: React.FC = () => {
           </div>
 
           <div className="mt-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-slate-400 mb-1">
               Case Summary & Context
             </h4>
-            <p className="text-xs text-gray-800 bg-gray-50 p-4 rounded-xl border border-gray-200 leading-relaxed font-medium">
+            <p className="text-xs text-gray-800 dark:text-slate-200 bg-gray-50 dark:bg-slate-900 p-4 rounded-xl border border-gray-200 dark:border-slate-700 leading-relaxed font-medium">
               {selectedIncident.summary}
             </p>
           </div>
 
           {/* Chronological Timeline */}
           <div className="mt-6">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300 mb-3">
               Audited Chronological Timeline ({timeline.length} events)
             </h4>
 
-            <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-xl text-xs text-blue-900 mb-4">
+            <div className="p-3.5 bg-blue-50/80 dark:bg-indigo-950/30 border border-blue-200 dark:border-indigo-900/50 rounded-xl text-xs text-blue-900 dark:text-indigo-200 mb-4">
               <strong>Evidence Invariant:</strong> The timeline rigorously distinguishes <em>Scan</em> vs <em>Attempted Submission</em> vs <em>Confirmed Submission</em>. No transmission is inferred unless corroborated by network endpoint logs.
             </div>
 
@@ -334,25 +334,25 @@ export const IncidentsPage: React.FC = () => {
               {timeline.map((item, idx) => (
                 <div
                   key={item.timeline_id}
-                  className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200 text-xs"
+                  className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 text-xs"
                 >
-                  <div className="w-6 h-6 rounded-full bg-indigo-100 text-[#5B4DFB] flex items-center justify-center text-[10px] font-mono shrink-0 font-bold">
+                  <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-[#5B4DFB] dark:text-indigo-400 flex items-center justify-center text-[10px] font-mono shrink-0 font-bold">
                     {idx + 1}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-gray-900">
+                      <span className="font-bold text-gray-900 dark:text-slate-100">
                         {item.event_type}
                       </span>
-                      <span className="font-mono text-[11px] text-gray-500">
+                      <span className="font-mono text-[11px] text-gray-500 dark:text-slate-400">
                         {new Date(item.event_time).toISOString().replace('T', ' ').slice(0, 19)} UTC
                       </span>
                     </div>
-                    <p className="text-gray-700 mt-1 leading-normal font-medium">
+                    <p className="text-gray-700 dark:text-slate-300 mt-1 leading-normal font-medium">
                       {item.description}
                     </p>
-                    <div className="text-[11px] text-gray-400 mt-1">
-                      Recorded by: <span className="font-semibold text-gray-600">{item.recorded_by}</span>
+                    <div className="text-[11px] text-gray-400 dark:text-slate-500 mt-1">
+                      Recorded by: <span className="font-semibold text-gray-600 dark:text-slate-400">{item.recorded_by}</span>
                     </div>
                   </div>
                 </div>
@@ -387,7 +387,7 @@ export const IncidentsPage: React.FC = () => {
       >
         <form onSubmit={handleCreateIncident} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
               Incident Title
             </label>
             <input
@@ -396,19 +396,19 @@ export const IncidentsPage: React.FC = () => {
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="e.g. Unapproved Claude Prompting with Customer Database URI"
-              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-gray-900 font-medium"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-gray-900 dark:text-slate-100 font-medium"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
                 Priority
               </label>
               <select
                 value={newPriority}
                 onChange={(e) => setNewPriority(e.target.value as IncidentPriority)}
-                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none text-gray-900 font-semibold"
+                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:outline-none text-gray-900 dark:text-slate-100 font-semibold"
               >
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
@@ -418,13 +418,13 @@ export const IncidentsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
                 Subject User
               </label>
               <select
                 value={newUserId}
                 onChange={(e) => setNewUserId(e.target.value)}
-                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none text-gray-900 font-semibold"
+                className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:outline-none text-gray-900 dark:text-slate-100 font-semibold"
               >
                 <option value="">Current User ({currentUser?.username})</option>
                 {users.map((u) => (
@@ -437,13 +437,13 @@ export const IncidentsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
               Assigned Investigator
             </label>
             <select
               value={newAssignedTo}
               onChange={(e) => setNewAssignedTo(e.target.value)}
-              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none text-gray-900 font-semibold"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:outline-none text-gray-900 dark:text-slate-100 font-semibold"
             >
               <option value="">Assign to Me ({currentUser?.username})</option>
               {users.map((u) => (
@@ -455,7 +455,7 @@ export const IncidentsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
               Executive Summary & Scope
             </label>
             <textarea
@@ -464,15 +464,15 @@ export const IncidentsPage: React.FC = () => {
               value={newSummary}
               onChange={(e) => setNewSummary(e.target.value)}
               placeholder="Describe observation, workstation telemetry, and initial findings..."
-              className="mt-1 w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-gray-900 font-medium"
+              className="mt-1 w-full p-3 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-gray-900 dark:text-slate-100 font-medium"
             />
           </div>
 
-          <div className="pt-3 flex justify-end gap-2 border-t border-gray-150">
+          <div className="pt-3 flex justify-end gap-2 border-t border-gray-150 dark:border-slate-700">
             <button
               type="button"
               onClick={() => setIsCreateModalOpen(false)}
-              className="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -495,13 +495,13 @@ export const IncidentsPage: React.FC = () => {
       >
         <form onSubmit={handleAddTimelineEntry} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
               Event Classification
             </label>
             <select
               value={eventType}
               onChange={(e) => setEventType(e.target.value as TimelineEventType)}
-              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none text-gray-900 font-semibold"
+              className="mt-1 w-full px-3.5 py-2 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:outline-none text-gray-900 dark:text-slate-100 font-semibold"
             >
               <option value="Scan">Scan (Local client text scan performed)</option>
               <option value="Finding">Finding (Specific rule triggered)</option>
@@ -515,7 +515,7 @@ export const IncidentsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
               Event Description & Metadata
             </label>
             <textarea
@@ -524,15 +524,15 @@ export const IncidentsPage: React.FC = () => {
               value={eventDesc}
               onChange={(e) => setEventDesc(e.target.value)}
               placeholder="e.g. Employee acknowledged warning and replaced credentials with redaction token."
-              className="mt-1 w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-gray-900 font-medium"
+              className="mt-1 w-full p-3 text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-gray-900 dark:text-slate-100 font-medium"
             />
           </div>
 
-          <div className="pt-3 flex justify-end gap-2 border-t border-gray-150">
+          <div className="pt-3 flex justify-end gap-2 border-t border-gray-150 dark:border-slate-700">
             <button
               type="button"
               onClick={() => setIsAddTimelineModalOpen(false)}
-              className="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>

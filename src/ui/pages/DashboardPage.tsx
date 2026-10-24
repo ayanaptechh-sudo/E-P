@@ -171,7 +171,7 @@ export function DashboardPage({ onNavigate }: DashboardProps = {}) {
           <button
             type="button"
             onClick={() => onNavigate && onNavigate('scan-clipboard')}
-            className="px-3 py-1.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-medium shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <ClipboardCheck className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
             <span>Audit Clipboard</span>
@@ -378,7 +378,7 @@ export function DashboardPage({ onNavigate }: DashboardProps = {}) {
               <button
                 type="button"
                 onClick={() => onNavigate && onNavigate('reports')}
-                className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
               >
                 <Download className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                 <span>Export Audit</span>

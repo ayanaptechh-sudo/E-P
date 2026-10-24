@@ -58,7 +58,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white font-sans antialiased selection:bg-purple-500 selection:text-white">
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white dark:bg-slate-900 font-sans antialiased selection:bg-purple-500 selection:text-white">
       {/* =========================================================================
           LEFT SIDE: SOLID DEEP PURPLE CONTAINER WITH 3D ANIMATED ISOMETRIC ELEMENT
          ========================================================================= */}
